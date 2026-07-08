@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X, Camera } from "lucide-react";
+import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X, Camera, ZoomIn } from "lucide-react";
 import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
@@ -62,6 +62,7 @@ function initialForm() {
     service_type: "",
     vehicle_type: "automovel" as string,
     vehicle_plate: "",
+    vehicle_plate_type: "mercosul" as "mercosul" | "antiga",
     vehicle_brand: "",
     vehicle_model: "",
     vehicle_color: "",
@@ -84,6 +85,9 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   const [visitorFormOpen, setVisitorFormOpen] = useState(false);
   const [providerFormOpen, setProviderFormOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [photoViewOpen, setPhotoViewOpen] = useState(false);
+  const [photoCropOpen, setPhotoCropOpen] = useState(false);
+  const [cropImage, setCropImage] = useState<string | null>(null);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -105,6 +109,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
       service_type: person.service_type ?? "",
       vehicle_type: person.vehicle_type ?? "automovel",
       vehicle_plate: person.vehicle_plate ?? "",
+      vehicle_plate_type: "mercosul" as "mercosul" | "antiga",
       vehicle_brand: person.vehicle_brand ?? "",
       vehicle_model: person.vehicle_model ?? "",
       vehicle_color: person.vehicle_color ?? "",
@@ -195,67 +200,100 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
 
   if (!form.existing_person_id) {
     return (
-      <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">Registrar Entrada</DialogTitle>
-            <DialogDescription>Selecione ou cadastre uma pessoa</DialogDescription>
-          </DialogHeader>
+      <>
+        <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Registrar Entrada</DialogTitle>
+              <DialogDescription>Selecione ou cadastre uma pessoa</DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <KnownPersonSearch onSelect={handleSelectKnown} />
+            <div className="space-y-4 py-4">
+              <KnownPersonSearch onSelect={handleSelectKnown} />
 
-            {!registerOptionsOpen ? (
-              <Button type="button" variant="outline" onClick={() => setRegisterOptionsOpen(true)} className="w-full h-10">
-                <Plus className="h-4 w-4 mr-2" /> Cadastrar nova pessoa
-              </Button>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 rounded-lg border border-dashed p-3">
-                <Button type="button" variant="outline" onClick={() => setVisitorFormOpen(true)} className="h-12">
-                  <UserRound className="h-4 w-4 mr-2" /> Visitante
+              {!registerOptionsOpen ? (
+                <Button type="button" variant="outline" onClick={() => setRegisterOptionsOpen(true)} className="w-full h-10">
+                  <Plus className="h-4 w-4 mr-2" /> Cadastrar nova pessoa
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setProviderFormOpen(true)} className="h-12">
-                  <Wrench className="h-4 w-4 mr-2" /> Prestador
-                </Button>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 rounded-lg border border-dashed p-3">
+                  <Button type="button" variant="outline" onClick={() => setVisitorFormOpen(true)} className="h-12">
+                    <UserRound className="h-4 w-4 mr-2" /> Visitante
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setProviderFormOpen(true)} className="h-12">
+                    <Wrench className="h-4 w-4 mr-2" /> Prestador
+                  </Button>
+                </div>
+              )}
+            </div>
 
-          <VisitorForm
-            open={visitorFormOpen}
-            onOpenChange={setVisitorFormOpen}
-            residents={residents}
-            onCreated={handleSelectKnown}
-          />
-          <ProviderForm
-            open={providerFormOpen}
-            onOpenChange={setProviderFormOpen}
-            residents={residents}
-            onCreated={handleSelectKnown}
-          />
-        </DialogContent>
-      </Dialog>
+            <VisitorForm
+              open={visitorFormOpen}
+              onOpenChange={setVisitorFormOpen}
+              residents={residents}
+              onCreated={handleSelectKnown}
+            />
+            <ProviderForm
+              open={providerFormOpen}
+              onOpenChange={setProviderFormOpen}
+              residents={residents}
+              onCreated={handleSelectKnown}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <PhotoViewModal
+          open={photoViewOpen}
+          onOpenChange={setPhotoViewOpen}
+          photoUrl={form.photo_url}
+          personName={form.full_name}
+        />
+        <PhotoCropModal
+          open={photoCropOpen}
+          onOpenChange={setPhotoCropOpen}
+          imageUrl={cropImage}
+          onCrop={(croppedImage) => {
+            set("photo_url", croppedImage);
+            setCropImage(null);
+          }}
+        />
+      </>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-      <DialogContent className="max-w-3xl">
+    <>
+      <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
+        <DialogContent className="max-w-3xl">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <DialogTitle className="text-2xl">{form.full_name}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {VISITOR_CATEGORY_LABELS[form.category]}
-              </DialogDescription>
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <Badge variant="outline">{VISITOR_CATEGORY_LABELS[form.category]}</Badge>
+                {form.cpf && <Badge variant="secondary" className="font-mono text-xs">{form.cpf}</Badge>}
+                {form.document_number && (
+                  <Badge variant="secondary" className="font-mono text-xs">
+                    {form.document_type === "rg" ? "RG" : "Doc"}: {form.document_number}
+                  </Badge>
+                )}
+              </div>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="relative">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={form.photo_url ?? undefined} alt={form.full_name} />
-                  <AvatarFallback className="text-lg">{initials(form.full_name)}</AvatarFallback>
-                </Avatar>
-                <label htmlFor="photo-upload" className="absolute bottom-0 right-0 rounded-full bg-blue-600 p-1.5 cursor-pointer hover:bg-blue-700 transition-colors">
+              <div className="relative group">
+                <button
+                  onClick={() => setPhotoViewOpen(true)}
+                  className="relative rounded-full overflow-hidden hover:ring-2 ring-blue-400 transition-all"
+                >
+                  <Avatar className="h-20 w-20 cursor-pointer">
+                    <AvatarImage src={form.photo_url ?? undefined} alt={form.full_name} />
+                    <AvatarFallback className="text-lg">{initials(form.full_name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <ZoomIn className="h-5 w-5 text-white" />
+                  </div>
+                </button>
+                <label htmlFor="photo-upload" className="absolute bottom-0 right-0 rounded-full bg-blue-600 p-1.5 cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
                   <Camera className="h-4 w-4 text-white" />
                   <input
                     id="photo-upload"
@@ -267,7 +305,8 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                       if (file) {
                         const reader = new FileReader();
                         reader.onload = (evt) => {
-                          set("photo_url", evt.target?.result as string);
+                          setCropImage(evt.target?.result as string);
+                          setPhotoCropOpen(true);
                         };
                         reader.readAsDataURL(file);
                       }
@@ -462,11 +501,23 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                 </Select>
               </div>
               <div className="space-y-1.5">
+                <Label>Tipo de Placa</Label>
+                <Select value={form.vehicle_plate_type} onValueChange={(v) => set("vehicle_plate_type", v as "mercosul" | "antiga")}>
+                  <SelectTrigger className="h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mercosul">Mercosul (ABC1D23)</SelectItem>
+                    <SelectItem value="antiga">Antiga (ABC-1234)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
                 <Label>Placa</Label>
                 <Input
                   value={form.vehicle_plate}
                   onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
-                  placeholder="ABC1D23"
+                  placeholder={form.vehicle_plate_type === "mercosul" ? "ABC1D23" : "ABC-1234"}
                   className="h-10 font-mono text-sm"
                 />
               </div>
@@ -515,6 +566,132 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+
+    <PhotoViewModal
+      open={photoViewOpen}
+      onOpenChange={setPhotoViewOpen}
+      photoUrl={form.photo_url}
+      personName={form.full_name}
+    />
+    <PhotoCropModal
+      open={photoCropOpen}
+      onOpenChange={setPhotoCropOpen}
+      imageUrl={cropImage}
+      onCrop={(croppedImage) => {
+        set("photo_url", croppedImage);
+        setCropImage(null);
+      }}
+    />
+    </>
+  );
+}
+
+function PhotoViewModal({ open, onOpenChange, photoUrl, personName }: { open: boolean; onOpenChange: (open: boolean) => void; photoUrl: string | null; personName: string }) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Foto de {personName}</DialogTitle>
+        </DialogHeader>
+        {photoUrl && (
+          <div className="flex items-center justify-center bg-muted rounded-lg overflow-hidden max-h-96">
+            <img src={photoUrl} alt={personName} className="max-w-full max-h-96 object-contain" />
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PhotoCropModal({
+  open,
+  onOpenChange,
+  imageUrl,
+  onCrop,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  imageUrl: string | null;
+  onCrop: (croppedImage: string) => void;
+}) {
+  const [zoom, setZoom] = useState(100);
+  const [rotation, setRotation] = useState(0);
+
+  const handleCrop = () => {
+    if (imageUrl) {
+      onCrop(imageUrl);
+      onOpenChange(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Editar Foto</DialogTitle>
+          <DialogDescription>Ajuste o zoom e rotação conforme necessário</DialogDescription>
+        </DialogHeader>
+        {imageUrl && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-center bg-muted rounded-lg overflow-hidden max-h-80">
+              <img
+                src={imageUrl}
+                alt="crop"
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "400px",
+                  objectFit: "contain",
+                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
+                  transition: "transform 0.2s",
+                }}
+              />
+            </div>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Zoom: {zoom}%</Label>
+                <input
+                  type="range"
+                  min="50"
+                  max="150"
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Rotação: {rotation}°</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
+                  >
+                    Girar Esquerda
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRotation((r) => (r + 90) % 360)}
+                  >
+                    Girar Direita
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="gap-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={handleCrop}>
+                Confirmar
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
