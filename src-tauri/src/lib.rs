@@ -3,6 +3,7 @@ use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_updater::UpdaterExt;
 
 /// Porta local onde o sidecar Node (Next.js standalone) escuta.
 const SIDECAR_PORT: u16 = 34115;
@@ -24,6 +25,7 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(Sidecar(Mutex::new(None)))
         .setup(|app| {
             if cfg!(debug_assertions) {
@@ -72,11 +74,24 @@ pub fn run() {
                 format!("http://127.0.0.1:{SIDECAR_PORT}")
             };
 
-            WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().unwrap()))
+            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url.parse().unwrap()))
                 .title("CHControl — Controle de Acesso")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(1024.0, 640.0)
                 .build()?;
+
+            // Verificar atualizações em segundo plano
+            let app_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
+                rt.block_on(async {
+                    if let Ok(update) = app_handle.updater().check().await {
+                        if update.is_update_available() {
+                            let _ = update.download_and_install().await;
+                        }
+                    }
+                });
+            });
 
             Ok(())
         })

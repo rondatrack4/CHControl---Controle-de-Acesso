@@ -15,6 +15,14 @@
       "csp": null
     }
   },
+  "updater": {
+    "active": true,
+    "endpoints": [
+      "https://releases.githubusercontent.com/repos/rondatrack4/CHControl---Controle-de-Acesso/releases/download/v{{current_version}}/latest.json"
+    ],
+    "dialog": true,
+    "pubkey": ""
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],

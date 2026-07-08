@@ -1,0 +1,70 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Release v__VERSION__'
+          releaseBody: 'CHControl - Auto Update'
+          releaseDraft: false
+          prerelease: false
+
+      - name: Generate latest.json for updater
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          $tag = "${{ github.ref }}".Replace('refs/tags/v', '')
+          $releaseUrl = "https://github.com/rondatrack4/CHControl---Controle-de-Acesso/releases/download/v$tag"
+
+          $latestJson = @{
+            version = $tag
+            notes = "CHControl v$tag - Auto Update"
+            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = ""
+                url = "$releaseUrl/CHControl_${tag}_x64.msi"
+              }
+            }
+          } | ConvertTo-Json
+
+          $latestJson | Out-File -Encoding UTF8 "latest.json"
+
+      - name: Upload latest.json to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
