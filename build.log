@@ -1,0 +1,5 @@
+
+> chcontrol@1.0.0 tauri:build
+> tauri build
+
+       Error `"tauri.conf.json"` error: Additional properties are not allowed ('updater' was unexpected)

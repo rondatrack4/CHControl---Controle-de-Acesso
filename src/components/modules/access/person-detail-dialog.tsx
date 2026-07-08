@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Car, Home, IdCard, Phone, Wrench } from "lucide-react";
 import { initials } from "@/lib/utils";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/constants";
+import { PhotoWithViewer } from "@/components/shared/photo-viewer";
 import { VisitTimeline } from "@/components/modules/access/visit-timeline";
 import type { AccessLogDestination, DocumentType } from "@/lib/database.types";
 
@@ -56,10 +57,17 @@ export function PersonDetailDialog({ open, onOpenChange, person, timeline }: Per
         </DialogHeader>
 
         <div className="flex flex-col items-center gap-3 text-center">
-          <Avatar className="h-24 w-24">
-            <AvatarImage src={person.photoUrl ?? undefined} alt={person.name} />
-            <AvatarFallback className="text-2xl">{initials(person.name)}</AvatarFallback>
-          </Avatar>
+          {person.photoUrl ? (
+            <PhotoWithViewer
+              photoUrl={person.photoUrl}
+              photoAlt={person.name}
+              className="h-24 w-24 rounded-full"
+            />
+          ) : (
+            <Avatar className="h-24 w-24">
+              <AvatarFallback className="text-2xl">{initials(person.name)}</AvatarFallback>
+            </Avatar>
+          )}
           <div>
             <p className="text-lg font-semibold">{person.name}</p>
             <Badge variant="outline" className="mt-1">{person.typeLabel}</Badge>

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Wrench, UserRound, X } from "lucide-react";
 import { useEnterSubmit } from "@/lib/form-utils";
+import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
   DialogContent,
@@ -57,6 +58,7 @@ function initialForm() {
     photo_url: null as string | null,
     company_name: "",
     service_type: "",
+    vehicle_type: "automovel" as string,
     vehicle_plate: "",
     vehicle_brand: "",
     vehicle_model: "",
@@ -99,6 +101,7 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
       photo_url: person.photo_url,
       company_name: person.company_name ?? "",
       service_type: person.service_type ?? "",
+      vehicle_type: person.vehicle_type ?? "automovel",
       vehicle_plate: person.vehicle_plate ?? "",
       vehicle_brand: person.vehicle_brand ?? "",
       vehicle_model: person.vehicle_model ?? "",
@@ -133,6 +136,7 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
       photo_url: null,
       company_name: "",
       service_type: "",
+      vehicle_type: "automovel",
       vehicle_plate: "",
       vehicle_brand: "",
       vehicle_model: "",
@@ -291,10 +295,25 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
                   <p className="mb-3 text-sm font-semibold">Veículo</p>
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-1.5">
+                      <Label>Tipo</Label>
+                      <Select value={form.vehicle_type || "automovel"} onValueChange={(v) => set("vehicle_type", v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automovel">Automóvel</SelectItem>
+                          <SelectItem value="moto">Moto</SelectItem>
+                          <SelectItem value="caminhao">Caminhão</SelectItem>
+                          <SelectItem value="bicicleta">Bicicleta</SelectItem>
+                          <SelectItem value="outro">Outro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
                       <Label>Placa</Label>
                       <Input
                         value={form.vehicle_plate}
-                        onChange={(e) => set("vehicle_plate", e.target.value.toUpperCase())}
+                        onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
                         placeholder="ABC1D23"
                       />
                     </div>
