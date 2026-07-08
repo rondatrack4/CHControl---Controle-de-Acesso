@@ -507,8 +507,8 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="mercosul">Mercosul (ABC1D23)</SelectItem>
-                    <SelectItem value="antiga">Antiga (ABC-1234)</SelectItem>
+                    <SelectItem value="mercosul">Mercosul</SelectItem>
+                    <SelectItem value="antiga">Placa Cinza</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -616,171 +616,164 @@ function PhotoCropModal({
   imageUrl: string | null;
   onCrop: (croppedImage: string) => void;
 }) {
-  const [zoom, setZoom] = useState(100);
-  const [offsetX, setOffsetX] = useState(0);
-  const [offsetY, setOffsetY] = useState(0);
+  const [scale, setScale] = useState(1);
+  const [posX, setPosX] = useState(0);
+  const [posY, setPosY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const containerRef = useState<HTMLDivElement | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
     setIsDragging(true);
-    setDragStart({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+    setDragStart({ x: e.clientX - posX, y: e.clientY - posY });
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDragging) return;
-    setOffsetX(e.clientX - dragStart.x);
-    setOffsetY(e.clientY - dragStart.y);
+    setPosX(e.clientX - dragStart.x);
+    setPosY(e.clientY - dragStart.y);
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
   };
 
-  const handleCrop = () => {
-    if (!imageUrl || !containerRef[1]) return;
+  const performCrop = () => {
+    if (!imageUrl) return;
 
     const img = new Image();
     img.onload = () => {
       try {
+        const cropSize = 320;
         const canvas = document.createElement("canvas");
-        const cropSize = 300;
         canvas.width = cropSize;
         canvas.height = cropSize;
         const ctx = canvas.getContext("2d")!;
 
-        // Calcular posição da imagem no canvas
-        const imgWidth = (img.width * zoom) / 100;
-        const imgHeight = (img.height * zoom) / 100;
-
-        // Posição central - metade do tamanho da imagem + offset
-        const drawX = 150 - imgWidth / 2 + offsetX;
-        const drawY = 150 - imgHeight / 2 + offsetY;
-
-        // Desenhar fundo branco
+        // Fundo branco
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, cropSize, cropSize);
 
-        // Desenhar imagem
-        ctx.drawImage(img, drawX, drawY, imgWidth, imgHeight);
+        // Desenhar imagem com escala e posição
+        const scaledWidth = img.width * scale;
+        const scaledHeight = img.height * scale;
+        const centerX = cropSize / 2 - scaledWidth / 2 + posX;
+        const centerY = cropSize / 2 - scaledHeight / 2 + posY;
 
-        const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        ctx.drawImage(img, centerX, centerY, scaledWidth, scaledHeight);
+
+        const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
         onCrop(croppedDataUrl);
+
+        // Resetar e fechar
+        setScale(1);
+        setPosX(0);
+        setPosY(0);
         onOpenChange(false);
-      } catch (error) {
-        console.error("Erro ao cortar imagem:", error);
+      } catch (err) {
+        console.error("Erro no corte:", err);
+        alert("Erro ao processar a imagem");
       }
     };
-    img.crossOrigin = "anonymous";
     img.src = imageUrl;
   };
 
   if (!open || !imageUrl) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-w-xl"
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
-      >
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      if (!newOpen) {
+        setScale(1);
+        setPosX(0);
+        setPosY(0);
+        onOpenChange(false);
+      }
+    }}>
+      <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Cortar Foto</DialogTitle>
-          <DialogDescription>Arraste a imagem para posicionar dentro do quadrado</DialogDescription>
+          <DialogDescription>Arraste para posicionar</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Crop area */}
-          <div className="relative mx-auto w-80 h-80 bg-black/80 rounded-lg overflow-hidden cursor-move select-none border-4 border-blue-500">
-            {/* Blurred background overlay */}
+          {/* Crop Preview - Quadrado 1:1 */}
+          <div
+            className="relative mx-auto w-80 h-80 bg-black/90 rounded-lg overflow-hidden border-4 border-blue-500 select-none"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            style={{ cursor: isDragging ? "grabbing" : "grab" }}
+          >
+            {/* Imagem com desfoque de fundo */}
             <img
               src={imageUrl}
-              alt="blur"
-              className="absolute inset-0 w-full h-full object-cover blur-md"
+              alt="preview bg"
+              className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20"
+            />
+
+            {/* Imagem arrastável */}
+            <img
+              src={imageUrl}
+              alt="crop"
+              className="absolute pointer-events-none select-none"
               style={{
-                opacity: 0.3,
+                width: `${scale * 100}%`,
+                height: `${scale * 100}%`,
+                left: `${50 - scale * 50 + (posX / 320) * 100}%`,
+                top: `${50 - scale * 50 + (posY / 320) * 100}%`,
+                transform: "translate(-50%, -50%)",
               }}
             />
 
-            {/* Draggable image with vignette */}
-            <div
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ cursor: isDragging ? "grabbing" : "grab" }}
-            >
-              <img
-                src={imageUrl}
-                alt="crop preview"
-                className="pointer-events-none select-none"
-                style={{
-                  maxWidth: "150%",
-                  maxHeight: "150%",
-                  objectFit: "cover",
-                  transform: `scale(${zoom / 100}) translate(${offsetX}px, ${offsetY}px)`,
-                  transition: isDragging ? "none" : "transform 0.1s",
-                }}
-              />
-            </div>
+            {/* Guias do centro */}
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
+            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
 
-            {/* Center guides */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-px h-12 bg-white/30" />
-              <div className="h-px w-12 bg-white/30 absolute" />
-            </div>
-
-            {/* Corner indicators */}
-            <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-white" />
-            <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-white" />
-            <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-white" />
-            <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white" />
+            {/* Cantos */}
+            <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-white" />
+            <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-white" />
+            <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-white" />
+            <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-white" />
           </div>
 
-          {/* Controls */}
-          <div className="space-y-3">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs font-medium">Zoom</Label>
-                <span className="text-xs text-muted-foreground">{zoom}%</span>
-              </div>
-              <input
-                type="range"
-                min="50"
-                max="200"
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
-              />
+          {/* Zoom Slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Zoom</Label>
+              <span className="text-xs text-muted-foreground">{Math.round(scale * 100)}%</span>
             </div>
+            <input
+              type="range"
+              min="0.5"
+              max="3"
+              step="0.1"
+              value={scale}
+              onChange={(e) => setScale(parseFloat(e.target.value))}
+              className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+            />
           </div>
 
-          <DialogFooter className="gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+          {/* Botões */}
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => {
+                setScale(1);
+                setPosX(0);
+                setPosY(0);
                 onOpenChange(false);
               }}
+              className="flex-1 px-3 py-2 text-sm border rounded-md hover:bg-slate-100"
             >
               Cancelar
-            </Button>
-            <Button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleCrop();
-              }}
-              className="bg-blue-600 hover:bg-blue-700"
+            </button>
+            <button
+              onClick={performCrop}
+              className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
             >
-              Confirmar Corte
-            </Button>
-          </DialogFooter>
+              Confirmar
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
