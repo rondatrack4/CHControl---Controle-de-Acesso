@@ -32,7 +32,7 @@ import { registerEntry, checkRecurringAuthToday, type KnownPersonResult } from "
 import { initials, maskCPF, maskCNPJ, residenceLabel } from "@/lib/utils";
 import { playEntrySound } from "@/lib/sound";
 import { VISITOR_CATEGORY_LABELS, CATEGORY_TO_PERSON_TYPE } from "@/lib/constants";
-import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType, Unit } from "@/lib/database.types";
+import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType, Unit, AccessLog } from "@/lib/database.types";
 import type { DestinationInput } from "@/lib/validations";
 
 interface EntryFormDialogProps {
@@ -40,6 +40,7 @@ interface EntryFormDialogProps {
   onOpenChange: (open: boolean) => void;
   residents: Resident[];
   units?: Unit[];
+  inside?: AccessLog[];
 }
 
 function emptyDestination(): DestinationInput {
@@ -77,7 +78,7 @@ function initialForm() {
   };
 }
 
-export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: EntryFormDialogProps) {
+export function EntryFormDialog({ open, onOpenChange, residents, units = [], inside = [] }: EntryFormDialogProps) {
   const [form, setForm] = useState(initialForm);
   const [pending, startTransition] = useTransition();
   const [registerOptionsOpen, setRegisterOptionsOpen] = useState(false);
@@ -160,6 +161,15 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: E
   }
 
   function submit() {
+    // Validar se pessoa já está dentro
+    if (form.existing_person_id) {
+      const alreadyInside = inside.some(log => log.person_id === form.existing_person_id && log.person_type === CATEGORY_TO_PERSON_TYPE[form.category]);
+      if (alreadyInside) {
+        toast.error("Esta pessoa já está registrada como dentro do condomínio.");
+        return;
+      }
+    }
+
     // Se selecionou um destino diferente, atualiza o primeiro
     let destinations = form.destinations;
     if (form.selectedDestinationResidentId) {
@@ -223,7 +233,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: E
           </DialogDescription>
         </DialogHeader>
 
-        <form className="max-h-[70vh] space-y-6 overflow-y-auto pr-1" onSubmit={(e) => { e.preventDefault(); submit(); }} onKeyDown={useEnterSubmit(submit)}>
+        <form className="max-h-[70vh] space-y-6 overflow-y-auto pr-1" onSubmit={(e) => { e.preventDefault(); submit(); }}>
           {/* Pessoa */}
           <section className="space-y-4">
             <p className="text-sm font-semibold">Pessoa</p>

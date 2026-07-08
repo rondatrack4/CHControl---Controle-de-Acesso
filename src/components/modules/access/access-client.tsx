@@ -220,7 +220,7 @@ export function AccessClient({ visitors, providers, inside, residents, units = [
         </Card>
       </div>
 
-      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} residents={residents} units={units} />
+      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} residents={residents} units={units} inside={inside} />
       <ExitFormDialog open={!!exitLog} onOpenChange={(o) => !o && setExitLog(null)} log={exitLog} />
       <PersonDetailDialog
         open={detailOpen}
