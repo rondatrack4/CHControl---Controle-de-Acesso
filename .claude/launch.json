@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "chcontrol-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "chcontrol-dev-desktop",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:desktop"],
+      "port": 3010
+    }
+  ]
+}
