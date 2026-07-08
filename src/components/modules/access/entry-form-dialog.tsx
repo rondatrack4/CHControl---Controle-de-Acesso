@@ -223,7 +223,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: E
           </DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-6 overflow-y-auto pr-1" onKeyDown={useEnterSubmit(submit)}>
+        <form className="max-h-[70vh] space-y-6 overflow-y-auto pr-1" onSubmit={(e) => { e.preventDefault(); submit(); }} onKeyDown={useEnterSubmit(submit)}>
           {/* Pessoa */}
           <section className="space-y-4">
             <p className="text-sm font-semibold">Pessoa</p>
@@ -410,7 +410,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: E
               </>
             )}
           </section>
-        </div>
+        </form>
 
         <DialogFooter className="mt-2 gap-2">
           <Button variant="outline" onClick={close} disabled={pending}>

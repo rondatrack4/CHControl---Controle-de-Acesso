@@ -1,11 +1,11 @@
 // Helpers para melhorar UX de formulários
 
 /**
- * Hook pra usar em inputs ou divs que devem submeter ao pressionar Enter
+ * Hook pra usar em inputs, forms ou divs que devem submeter ao pressionar Enter
  * Ideal pra buscas, inputs únicos, ou formulários simples
  */
 export function useEnterSubmit(onSubmit: () => void) {
-  return (e: React.KeyboardEvent<HTMLInputElement | HTMLDivElement>) => {
+  return (e: React.KeyboardEvent<HTMLInputElement | HTMLDivElement | HTMLFormElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       const target = e.target;
       // Só dispara se for um input ou textarea (não em selects ou outros elementos)
