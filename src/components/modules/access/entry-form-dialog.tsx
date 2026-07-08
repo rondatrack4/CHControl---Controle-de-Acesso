@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X, Camera, ZoomIn } from "lucide-react";
-import { maskPlate } from "@/lib/masks";
+import { formatPlateMercosul, formatPlateOld } from "@/lib/masks";
 import {
   Dialog,
   DialogContent,
@@ -91,6 +91,17 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  // Formata placa quando o tipo muda
+  function handlePlateTypeChange(newType: "mercosul" | "antiga") {
+    set("vehicle_plate_type", newType);
+    if (form.vehicle_plate) {
+      const formatted = newType === "mercosul"
+        ? formatPlateMercosul(form.vehicle_plate)
+        : formatPlateOld(form.vehicle_plate);
+      set("vehicle_plate", formatted);
+    }
   }
 
   function handleSelectKnown(person: KnownPersonResult) {
@@ -502,7 +513,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
               </div>
               <div className="space-y-1.5">
                 <Label>Tipo de Placa</Label>
-                <Select value={form.vehicle_plate_type} onValueChange={(v) => set("vehicle_plate_type", v as "mercosul" | "antiga")}>
+                <Select value={form.vehicle_plate_type} onValueChange={(v) => handlePlateTypeChange(v as "mercosul" | "antiga")}>
                   <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
@@ -516,9 +527,15 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                 <Label>Placa</Label>
                 <Input
                   value={form.vehicle_plate}
-                  onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
-                  placeholder={form.vehicle_plate_type === "mercosul" ? "ABC1D23" : "ABC-1234"}
-                  className="h-10 font-mono text-sm"
+                  onChange={(e) => {
+                    const formatted = form.vehicle_plate_type === "mercosul"
+                      ? formatPlateMercosul(e.target.value)
+                      : formatPlateOld(e.target.value);
+                    set("vehicle_plate", formatted);
+                  }}
+                  placeholder={form.vehicle_plate_type === "mercosul" ? "ABC1D23" : "BUY-8593"}
+                  maxLength={form.vehicle_plate_type === "mercosul" ? 7 : 8}
+                  className="h-10 font-mono text-sm uppercase"
                 />
               </div>
               <div className="space-y-1.5">
