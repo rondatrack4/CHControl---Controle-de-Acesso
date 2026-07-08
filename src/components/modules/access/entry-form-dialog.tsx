@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { toast } from "sonner";
 import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X, Camera, ZoomIn } from "lucide-react";
 import { formatPlateMercosul, formatPlateOld } from "@/lib/masks";
@@ -284,21 +284,29 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                 <DialogTitle className="text-3xl font-bold">{form.full_name}</DialogTitle>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col items-center gap-2">
               <div className="relative group">
                 <button
+                  type="button"
                   onClick={() => setPhotoViewOpen(true)}
-                  className="relative rounded-full overflow-hidden hover:ring-2 ring-blue-400 transition-all"
+                  className="relative aspect-square h-24 w-24 overflow-hidden rounded-xl border-2 border-border bg-muted transition-all hover:ring-2 ring-blue-400"
                 >
-                  <Avatar className="h-20 w-20 cursor-pointer">
-                    <AvatarImage src={form.photo_url ?? undefined} alt={form.full_name} />
-                    <AvatarFallback className="text-lg">{initials(form.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  {form.photo_url ? (
+                    <img
+                      src={form.photo_url}
+                      alt={form.full_name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-muted-foreground">
+                      {initials(form.full_name)}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
                     <ZoomIn className="h-5 w-5 text-white" />
                   </div>
                 </button>
-                <label htmlFor="photo-upload" className="absolute bottom-0 right-0 rounded-full bg-blue-600 p-1.5 cursor-pointer hover:bg-blue-700 transition-colors shadow-lg">
+                <label htmlFor="photo-upload" className="absolute -bottom-1 -right-1 cursor-pointer rounded-full bg-blue-600 p-1.5 shadow-lg transition-colors hover:bg-blue-700">
                   <Camera className="h-4 w-4 text-white" />
                   <input
                     id="photo-upload"
@@ -315,6 +323,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                         };
                         reader.readAsDataURL(file);
                       }
+                      e.target.value = "";
                     }}
                   />
                 </label>
@@ -616,6 +625,9 @@ function PhotoViewModal({ open, onOpenChange, photoUrl, personName }: { open: bo
   );
 }
 
+const CROP_BOX = 288; // px exibidos (w-72 / h-72)
+const CROP_OUTPUT = 512; // resolução final salva
+
 function PhotoCropModal({
   open,
   onOpenChange,
@@ -627,63 +639,101 @@ function PhotoCropModal({
   imageUrl: string | null;
   onCrop: (croppedImage: string) => void;
 }) {
-  const [scale, setScale] = useState(1);
-  const [posX, setPosX] = useState(0);
-  const [posY, setPosY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [natural, setNatural] = useState({ w: 0, h: 0 });
+  const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+
+  // Fit "cover": menor escala que ainda preenche todo o quadrado.
+  const coverScale = natural.w && natural.h ? Math.max(CROP_BOX / natural.w, CROP_BOX / natural.h) : 1;
+  const effScale = coverScale * zoom;
+  const dispW = natural.w * effScale;
+  const dispH = natural.h * effScale;
+
+  // Trava a posição para a imagem sempre cobrir o quadrado (sem bordas vazias).
+  const clamp = (x: number, y: number) => {
+    const minX = CROP_BOX - dispW;
+    const minY = CROP_BOX - dispH;
+    return {
+      x: Math.min(0, Math.max(minX, x)),
+      y: Math.min(0, Math.max(minY, y)),
+    };
+  };
+
+  function reset() {
+    setZoom(1);
+    setPos({ x: 0, y: 0 });
+    setNatural({ w: 0, h: 0 });
+  }
+
+  function handleClose() {
+    reset();
+    onOpenChange(false);
+  }
+
+  const onImgLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    const w = img.naturalWidth;
+    const h = img.naturalHeight;
+    setNatural({ w, h });
+    // Centraliza
+    const cs = Math.max(CROP_BOX / w, CROP_BOX / h);
+    const dW = w * cs;
+    const dH = h * cs;
+    setPos({ x: (CROP_BOX - dW) / 2, y: (CROP_BOX - dH) / 2 });
+  };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - posX, y: e.clientY - posY });
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startY: e.clientY, baseX: pos.x, baseY: pos.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging) return;
-    setPosX(e.clientX - dragStart.x);
-    setPosY(e.clientY - dragStart.y);
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    setPos(clamp(dragRef.current.baseX + dx, dragRef.current.baseY + dy));
   };
 
   const handleMouseUp = () => {
-    setIsDragging(false);
+    dragRef.current = null;
+  };
+
+  // Reposiciona ao aplicar zoom mantendo o centro travado.
+  const handleZoom = (newZoom: number) => {
+    const oldEff = coverScale * zoom;
+    const newEff = coverScale * newZoom;
+    const cx = CROP_BOX / 2;
+    const cy = CROP_BOX / 2;
+    // Mantém o ponto central da imagem sob o centro do quadrado.
+    const relX = (cx - pos.x) / oldEff;
+    const relY = (cy - pos.y) / oldEff;
+    const nx = cx - relX * newEff;
+    const ny = cy - relY * newEff;
+    setZoom(newZoom);
+    setPos(clamp(nx, ny));
   };
 
   const performCrop = () => {
-    if (!imageUrl) return;
-
+    if (!imageUrl || !natural.w) return;
     const img = new Image();
     img.onload = () => {
       try {
-        const cropSize = 320;
         const canvas = document.createElement("canvas");
-        canvas.width = cropSize;
-        canvas.height = cropSize;
+        canvas.width = CROP_OUTPUT;
+        canvas.height = CROP_OUTPUT;
         const ctx = canvas.getContext("2d")!;
+        const r = CROP_OUTPUT / CROP_BOX; // escala prévia -> saída (WYSIWYG)
 
-        // Fundo branco
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, cropSize, cropSize);
+        ctx.fillRect(0, 0, CROP_OUTPUT, CROP_OUTPUT);
+        ctx.drawImage(img, pos.x * r, pos.y * r, dispW * r, dispH * r);
 
-        // Desenhar imagem com escala e posição
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
-        const centerX = cropSize / 2 - scaledWidth / 2 + posX;
-        const centerY = cropSize / 2 - scaledHeight / 2 + posY;
-
-        ctx.drawImage(img, centerX, centerY, scaledWidth, scaledHeight);
-
-        const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-        onCrop(croppedDataUrl);
-
-        // Resetar e fechar
-        setScale(1);
-        setPosX(0);
-        setPosY(0);
-        onOpenChange(false);
+        onCrop(canvas.toDataURL("image/jpeg", 0.92));
+        handleClose();
       } catch (err) {
         console.error("Erro no corte:", err);
-        alert("Erro ao processar a imagem");
       }
     };
     img.src = imageUrl;
@@ -692,98 +742,77 @@ function PhotoCropModal({
   if (!open || !imageUrl) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) {
-        setScale(1);
-        setPosX(0);
-        setPosY(0);
-        onOpenChange(false);
-      }
-    }}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-sm" onPointerDownOutside={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Cortar Foto</DialogTitle>
-          <DialogDescription>Arraste para posicionar</DialogDescription>
+          <DialogTitle>Ajustar Foto</DialogTitle>
+          <DialogDescription>Arraste a imagem e use o zoom para enquadrar</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Crop Preview - Quadrado 1:1 */}
+          {/* Moldura de corte 1:1 */}
           <div
-            className="relative mx-auto w-80 h-80 bg-black/90 rounded-lg overflow-hidden border-4 border-blue-500 select-none"
+            className="relative mx-auto h-72 w-72 select-none overflow-hidden rounded-lg bg-neutral-900"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-            style={{ cursor: isDragging ? "grabbing" : "grab" }}
+            style={{ cursor: dragRef.current ? "grabbing" : "grab" }}
           >
-            {/* Imagem com desfoque de fundo */}
-            <img
-              src={imageUrl}
-              alt="preview bg"
-              className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20"
-            />
-
-            {/* Imagem arrastável */}
             <img
               src={imageUrl}
               alt="crop"
-              className="absolute pointer-events-none select-none"
+              draggable={false}
+              onLoad={onImgLoad}
+              className="pointer-events-none absolute left-0 top-0 max-w-none select-none"
               style={{
-                width: `${scale * 100}%`,
-                height: `${scale * 100}%`,
-                left: `${50 - scale * 50 + (posX / 320) * 100}%`,
-                top: `${50 - scale * 50 + (posY / 320) * 100}%`,
-                transform: "translate(-50%, -50%)",
+                width: dispW ? `${dispW}px` : undefined,
+                height: dispH ? `${dispH}px` : undefined,
+                transform: `translate(${pos.x}px, ${pos.y}px)`,
               }}
             />
 
-            {/* Guias do centro */}
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
-            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
+            {/* Grade 3x3 (regra dos terços) */}
+            <div className="pointer-events-none absolute inset-0">
+              <div className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
+              <div className="absolute left-2/3 top-0 h-full w-px bg-white/25" />
+              <div className="absolute top-1/3 left-0 w-full h-px bg-white/25" />
+              <div className="absolute top-2/3 left-0 w-full h-px bg-white/25" />
+            </div>
 
-            {/* Cantos */}
-            <div className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-white" />
-            <div className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-white" />
-            <div className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-white" />
-            <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-white" />
+            {/* Borda / cantos */}
+            <div className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-white/80" />
+            <div className="pointer-events-none absolute left-2 top-2 h-5 w-5 border-l-2 border-t-2 border-white" />
+            <div className="pointer-events-none absolute right-2 top-2 h-5 w-5 border-r-2 border-t-2 border-white" />
+            <div className="pointer-events-none absolute bottom-2 left-2 h-5 w-5 border-b-2 border-l-2 border-white" />
+            <div className="pointer-events-none absolute bottom-2 right-2 h-5 w-5 border-b-2 border-r-2 border-white" />
           </div>
 
-          {/* Zoom Slider */}
+          {/* Zoom */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">Zoom</Label>
-              <span className="text-xs text-muted-foreground">{Math.round(scale * 100)}%</span>
+              <span className="text-xs text-muted-foreground">{Math.round(zoom * 100)}%</span>
             </div>
             <input
               type="range"
-              min="0.5"
-              max="3"
-              step="0.1"
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              min="1"
+              max="4"
+              step="0.05"
+              value={zoom}
+              onChange={(e) => handleZoom(parseFloat(e.target.value))}
+              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-slate-300 accent-blue-600"
             />
           </div>
 
-          {/* Botões */}
+          {/* Ações */}
           <div className="flex gap-3 pt-2">
-            <button
-              onClick={() => {
-                setScale(1);
-                setPosX(0);
-                setPosY(0);
-                onOpenChange(false);
-              }}
-              className="flex-1 px-3 py-2 text-sm border rounded-md hover:bg-slate-100"
-            >
+            <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
               Cancelar
-            </button>
-            <button
-              onClick={performCrop}
-              className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
-            >
+            </Button>
+            <Button type="button" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={performCrop}>
               Confirmar
-            </button>
+            </Button>
           </div>
         </div>
       </DialogContent>
