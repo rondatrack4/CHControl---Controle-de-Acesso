@@ -28,6 +28,7 @@ import { DocumentUpload } from "@/components/shared/document-upload";
 import { ResidentCombobox } from "@/components/shared/resident-combobox";
 import { maskCNPJ, maskCPF, residenceLabel } from "@/lib/utils";
 import { maskRG, formatPlateMercosul, formatPlateOld } from "@/lib/masks";
+import { useEnterSubmit } from "@/lib/form-utils";
 import { createProvider, updateProvider } from "@/app/(app)/prestadores/actions";
 import type { KnownPersonResult } from "@/app/(app)/acessos/actions";
 import type { ServiceProvider, Resident, DocumentType, CpfCnpjKind } from "@/lib/database.types";
@@ -168,7 +169,7 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
           </div>
         </DialogHeader>
 
-        <div className="space-y-5">
+        <div className="space-y-5" onKeyDown={useEnterSubmit(submit)}>
           {/* Morador vinculado */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
