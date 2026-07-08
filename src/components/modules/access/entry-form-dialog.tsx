@@ -617,81 +617,154 @@ function PhotoCropModal({
   onCrop: (croppedImage: string) => void;
 }) {
   const [zoom, setZoom] = useState(100);
-  const [rotation, setRotation] = useState(0);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const canvasRef = useState<HTMLCanvasElement | null>(null);
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - offsetX, y: e.clientY - offsetY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    setOffsetX(e.clientX - dragStart.x);
+    setOffsetY(e.clientY - dragStart.y);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
 
   const handleCrop = () => {
-    if (imageUrl) {
-      onCrop(imageUrl);
+    if (!imageUrl) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const cropSize = 300;
+      canvas.width = cropSize;
+      canvas.height = cropSize;
+      const ctx = canvas.getContext("2d")!;
+
+      const imgWidth = (img.width * zoom) / 100;
+      const imgHeight = (img.height * zoom) / 100;
+      const containerWidth = 300;
+      const containerHeight = 300;
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const centerX = containerWidth / 2 - imgWidth / 2;
+      const centerY = containerHeight / 2 - imgHeight / 2;
+
+      ctx.drawImage(
+        img,
+        centerX + offsetX,
+        centerY + offsetY,
+        imgWidth,
+        imgHeight
+      );
+
+      const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      onCrop(croppedDataUrl);
       onOpenChange(false);
-    }
+    };
+    img.src = imageUrl;
   };
+
+  if (!open || !imageUrl) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-xl" onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Editar Foto</DialogTitle>
-          <DialogDescription>Ajuste o zoom e rotação conforme necessário</DialogDescription>
+          <DialogTitle>Cortar Foto</DialogTitle>
+          <DialogDescription>Arraste a imagem para posicionar dentro do quadrado</DialogDescription>
         </DialogHeader>
-        {imageUrl && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-center bg-muted rounded-lg overflow-hidden max-h-80">
+
+        <div className="space-y-4">
+          {/* Crop area */}
+          <div className="relative mx-auto w-80 h-80 bg-black/80 rounded-lg overflow-hidden cursor-move select-none border-4 border-blue-500">
+            {/* Blurred background overlay */}
+            <img
+              src={imageUrl}
+              alt="blur"
+              className="absolute inset-0 w-full h-full object-cover blur-md"
+              style={{
+                opacity: 0.3,
+              }}
+            />
+
+            {/* Draggable image with vignette */}
+            <div
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ cursor: isDragging ? "grabbing" : "grab" }}
+            >
               <img
                 src={imageUrl}
-                alt="crop"
+                alt="crop preview"
+                className="pointer-events-none select-none"
                 style={{
-                  maxWidth: "100%",
-                  maxHeight: "400px",
-                  objectFit: "contain",
-                  transform: `scale(${zoom / 100}) rotate(${rotation}deg)`,
-                  transition: "transform 0.2s",
+                  maxWidth: "150%",
+                  maxHeight: "150%",
+                  objectFit: "cover",
+                  transform: `scale(${zoom / 100}) translate(${offsetX}px, ${offsetY}px)`,
+                  transition: isDragging ? "none" : "transform 0.1s",
                 }}
               />
             </div>
-            <div className="space-y-3">
-              <div>
-                <Label className="text-xs">Zoom: {zoom}%</Label>
-                <input
-                  type="range"
-                  min="50"
-                  max="150"
-                  value={zoom}
-                  onChange={(e) => setZoom(Number(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Rotação: {rotation}°</Label>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
-                  >
-                    Girar Esquerda
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRotation((r) => (r + 90) % 360)}
-                  >
-                    Girar Direita
-                  </Button>
-                </div>
-              </div>
+
+            {/* Center guides */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-px h-12 bg-white/30" />
+              <div className="h-px w-12 bg-white/30 absolute" />
             </div>
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="button" onClick={handleCrop}>
-                Confirmar
-              </Button>
-            </DialogFooter>
+
+            {/* Corner indicators */}
+            <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-white" />
+            <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-white" />
+            <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-white" />
+            <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-white" />
           </div>
-        )}
+
+          {/* Controls */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs font-medium">Zoom</Label>
+                <span className="text-xs text-muted-foreground">{zoom}%</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="200"
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleCrop} className="bg-blue-600 hover:bg-blue-700">
+              Confirmar Corte
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
