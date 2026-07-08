@@ -423,10 +423,10 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
         </form>
 
         <DialogFooter className="mt-2 gap-2">
-          <Button variant="outline" onClick={close} disabled={pending}>
+          <Button variant="outline" type="button" onClick={close} disabled={pending}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={pending || !!recurringBlockReason}>
+          <Button type="submit" disabled={pending || !!recurringBlockReason}>
             {pending && <Loader2 className="animate-spin" />}
             Registrar Entrada
           </Button>
