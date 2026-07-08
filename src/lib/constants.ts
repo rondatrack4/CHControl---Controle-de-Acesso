@@ -12,6 +12,7 @@ import {
   FileBarChart,
   PackageSearch,
   Repeat,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/lib/database.types";
@@ -31,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Prestadores", href: "/prestadores", icon: Wrench },
   { label: "Unidades", href: "/unidades", icon: Home },
   { label: "Recorrente", href: "/recorrentes", icon: Repeat },
+  { label: "Monitoramento", href: "/monitoramento", icon: Activity },
   { label: "Correspondências", href: "/correspondencias", icon: PackageSearch },
   { label: "Histórico", href: "/historico", icon: History },
   { label: "Auditoria", href: "/auditoria", icon: ScrollText },
