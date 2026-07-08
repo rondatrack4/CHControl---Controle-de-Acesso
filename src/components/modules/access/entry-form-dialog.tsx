@@ -244,7 +244,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
             <div>
               <DialogTitle className="text-2xl">{form.full_name}</DialogTitle>
               <DialogDescription className="mt-1">
-                {VISITOR_CATEGORY_LABELS[form.category]} • {form.phone}
+                {VISITOR_CATEGORY_LABELS[form.category]}
               </DialogDescription>
             </div>
             <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
@@ -254,21 +254,55 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
         </DialogHeader>
 
         <form onSubmit={submit} className="space-y-5">
-          {/* Info vinculada */}
+          {/* Info vinculada - Card Premium */}
           {form.residentName && (
-            <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 p-4">
+            <div className="rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 p-4 text-white shadow-lg">
               <div className="flex items-start gap-3">
-                <div className="mt-1 rounded-full bg-blue-100 p-2">
-                  <MapPin className="h-4 w-4 text-blue-600" />
+                <div className="rounded-full bg-white/20 p-3 backdrop-blur-sm">
+                  <MapPin className="h-5 w-5 text-white" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-blue-900">Morador vinculado</p>
-                  <p className="text-sm text-blue-800">{form.residentName}</p>
-                  {form.residenceLabel && <p className="text-xs text-blue-700 mt-1">{form.residenceLabel}</p>}
+                <div className="flex-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide opacity-90">Morador Vinculado</p>
+                  <p className="text-lg font-bold mt-1">{form.residentName}</p>
+                  {form.residenceLabel && <p className="text-sm opacity-90 mt-0.5">{form.residenceLabel}</p>}
                 </div>
               </div>
-            </Card>
+            </div>
           )}
+
+          {/* Dados pessoais - Pessoa */}
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Dados Pessoais</h3>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {form.cpf && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">CPF</Label>
+                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.cpf}</p>
+                </div>
+              )}
+              {form.document_number && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{form.document_type === "rg" ? "RG" : "Documento"}</Label>
+                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.document_number}</p>
+                </div>
+              )}
+              {form.phone && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Telefone</Label>
+                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.phone}</p>
+                </div>
+              )}
+              {form.company_name && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Empresa</Label>
+                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.company_name}</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Local de visita */}
           <div className="space-y-2">
