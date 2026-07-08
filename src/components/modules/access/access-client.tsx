@@ -14,7 +14,7 @@ import { EntryFormDialog } from "@/components/modules/access/entry-form-dialog";
 import { ExitFormDialog } from "@/components/modules/access/exit-form-dialog";
 import { formatDateTime, formatElapsed, initials, residenceLabel } from "@/lib/utils";
 import { PERSON_TYPE_LABELS, VISITOR_CATEGORY_LABELS } from "@/lib/constants";
-import type { Resident, ServiceProvider, Visitor } from "@/lib/database.types";
+import type { Resident, ServiceProvider, Visitor, Unit } from "@/lib/database.types";
 import type { AccessLogWithDestinations } from "@/app/(app)/acessos/page";
 
 type VisitorRow = Visitor & { resident: Resident | null };
@@ -25,9 +25,10 @@ interface AccessClientProps {
   providers: ProviderRow[];
   inside: AccessLogWithDestinations[];
   residents: Resident[];
+  units?: Unit[];
 }
 
-export function AccessClient({ visitors, providers, inside, residents }: AccessClientProps) {
+export function AccessClient({ visitors, providers, inside, residents, units = [] }: AccessClientProps) {
   const [insideQuery, setInsideQuery] = useState("");
   const [entryOpen, setEntryOpen] = useState(false);
   const [exitLog, setExitLog] = useState<AccessLogWithDestinations | null>(null);
@@ -219,7 +220,7 @@ export function AccessClient({ visitors, providers, inside, residents }: AccessC
         </Card>
       </div>
 
-      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} residents={residents} />
+      <EntryFormDialog open={entryOpen} onOpenChange={setEntryOpen} residents={residents} units={units} />
       <ExitFormDialog open={!!exitLog} onOpenChange={(o) => !o && setExitLog(null)} log={exitLog} />
       <PersonDetailDialog
         open={detailOpen}

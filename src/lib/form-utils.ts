@@ -7,8 +7,9 @@
 export function useEnterSubmit(onSubmit: () => void) {
   return (e: React.KeyboardEvent<HTMLInputElement | HTMLDivElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      // Se for um input, permite; se for div, só permite se o target for input
-      if (e.target instanceof HTMLInputElement || e.currentTarget instanceof HTMLDivElement) {
+      const target = e.target;
+      // Só dispara se for um input ou textarea (não em selects ou outros elementos)
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
         e.preventDefault();
         onSubmit();
       }

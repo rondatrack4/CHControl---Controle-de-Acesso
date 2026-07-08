@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { AccessClient } from "@/components/modules/access/access-client";
-import type { AccessLog, AccessLogDestination } from "@/lib/database.types";
+import type { AccessLog, AccessLogDestination, Unit } from "@/lib/database.types";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ export default async function AcessosPage() {
   const supabase = await createClient();
 
   // Moradores não registram entrada — apenas visitantes e prestadores.
-  const [visitorsRes, providersRes, insideRes, residentsRes] = await Promise.all([
+  const [visitorsRes, providersRes, insideRes, residentsRes, unitsRes] = await Promise.all([
     supabase.from("visitors").select("*, resident:residents(*)").eq("status", "active").order("full_name"),
     supabase.from("service_providers").select("*, resident:residents(*)").eq("status", "active").order("full_name"),
     supabase
@@ -19,6 +19,7 @@ export default async function AcessosPage() {
       .eq("status", "inside")
       .order("entry_at", { ascending: false }),
     supabase.from("residents").select("*").eq("status", "active").order("full_name"),
+    supabase.from("units").select("*").order("unit_type, block, apartment, quadra, lote"),
   ]);
 
   return (
@@ -27,6 +28,7 @@ export default async function AcessosPage() {
       providers={(providersRes.data as never) ?? []}
       inside={(insideRes.data as AccessLogWithDestinations[]) ?? []}
       residents={residentsRes.data ?? []}
+      units={(unitsRes.data as Unit[]) ?? []}
     />
   );
 }

@@ -32,13 +32,14 @@ import { registerEntry, checkRecurringAuthToday, type KnownPersonResult } from "
 import { initials, maskCPF, maskCNPJ, residenceLabel } from "@/lib/utils";
 import { playEntrySound } from "@/lib/sound";
 import { VISITOR_CATEGORY_LABELS, CATEGORY_TO_PERSON_TYPE } from "@/lib/constants";
-import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType } from "@/lib/database.types";
+import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType, Unit } from "@/lib/database.types";
 import type { DestinationInput } from "@/lib/validations";
 
 interface EntryFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   residents: Resident[];
+  units?: Unit[];
 }
 
 function emptyDestination(): DestinationInput {
@@ -76,7 +77,7 @@ function initialForm() {
   };
 }
 
-export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDialogProps) {
+export function EntryFormDialog({ open, onOpenChange, residents, units = [] }: EntryFormDialogProps) {
   const [form, setForm] = useState(initialForm);
   const [pending, startTransition] = useTransition();
   const [registerOptionsOpen, setRegisterOptionsOpen] = useState(false);
@@ -277,14 +278,28 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
                       <SelectContent>
                         {form.residentName && (
                           <SelectItem value={form.residentName}>
-                            📍 {form.residentName} (vinculado)
+                            {form.residentName} (vinculado)
                           </SelectItem>
                         )}
-                        {residents.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            📍 {r.full_name} ({r.block ? `Bloco ${r.block}, Apto ${r.apartment}` : `Quadra ${r.quadra}, Lote ${r.lote}`})
-                          </SelectItem>
-                        ))}
+                        <optgroup label="Moradores">
+                          {residents.map((r) => (
+                            <SelectItem key={r.id} value={r.id}>
+                              {r.full_name} – {r.block ? `Bloco ${r.block}, Apto ${r.apartment}` : `Quadra ${r.quadra}, Lote ${r.lote}`}
+                            </SelectItem>
+                          ))}
+                        </optgroup>
+                        {units.length > 0 && (
+                          <optgroup label="Unidades (sem proprietário)">
+                            {units.map((u) => (
+                              <SelectItem key={`unit-${u.id}`} value={`unit-${u.id}`}>
+                                {u.unit_type === "apartamento"
+                                  ? `Bloco ${u.block}, Apto ${u.apartment}`
+                                  : `Quadra ${u.quadra}, Lote ${u.lote}`}
+                                {u.owner_name && ` – ${u.owner_name}`}
+                              </SelectItem>
+                            ))}
+                          </optgroup>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
