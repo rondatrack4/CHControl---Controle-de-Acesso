@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText } from "lucide-react";
+import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X } from "lucide-react";
 import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
@@ -82,6 +82,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   const [registerOptionsOpen, setRegisterOptionsOpen] = useState(false);
   const [visitorFormOpen, setVisitorFormOpen] = useState(false);
   const [providerFormOpen, setProviderFormOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -272,33 +273,103 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
 
           {/* Dados pessoais - Pessoa */}
           <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
-            <div className="flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Dados Pessoais</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserRound className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">Dados Pessoais</h3>
+              </div>
+              {!isEditing ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="gap-1"
+                >
+                  <Edit2 className="h-3.5 w-3.5" /> Editar
+                </Button>
+              ) : (
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    className="gap-1 text-green-600 hover:bg-green-50"
+                  >
+                    <Check className="h-3.5 w-3.5" /> Pronto
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    className="gap-1 text-red-600 hover:bg-red-50"
+                  >
+                    <X className="h-3.5 w-3.5" /> Cancelar
+                  </Button>
+                </div>
+              )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               {form.cpf && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">CPF</Label>
-                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.cpf}</p>
+                  {isEditing ? (
+                    <Input
+                      value={form.cpf}
+                      onChange={(e) => set("cpf", e.target.value)}
+                      placeholder="000.000.000-00"
+                      className="h-9 font-mono text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-mono p-2 rounded bg-muted">{form.cpf}</p>
+                  )}
                 </div>
               )}
               {form.document_number && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">{form.document_type === "rg" ? "RG" : "Documento"}</Label>
-                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.document_number}</p>
+                  {isEditing ? (
+                    <Input
+                      value={form.document_number}
+                      onChange={(e) => set("document_number", e.target.value)}
+                      placeholder="00.000.000-0"
+                      className="h-9 font-mono text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-mono p-2 rounded bg-muted">{form.document_number}</p>
+                  )}
                 </div>
               )}
               {form.phone && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Telefone</Label>
-                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.phone}</p>
+                  {isEditing ? (
+                    <Input
+                      value={form.phone}
+                      onChange={(e) => set("phone", e.target.value)}
+                      placeholder="(00) 00000-0000"
+                      className="h-9 font-mono text-sm"
+                    />
+                  ) : (
+                    <p className="text-sm font-mono p-2 rounded bg-muted">{form.phone}</p>
+                  )}
                 </div>
               )}
               {form.company_name && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Empresa</Label>
-                  <p className="text-sm font-mono p-2 rounded bg-muted">{form.company_name}</p>
+                  {isEditing ? (
+                    <Input
+                      value={form.company_name}
+                      onChange={(e) => set("company_name", e.target.value)}
+                      placeholder="Nome da empresa"
+                      className="h-9"
+                    />
+                  ) : (
+                    <p className="text-sm font-mono p-2 rounded bg-muted">{form.company_name}</p>
+                  )}
                 </div>
               )}
             </div>
