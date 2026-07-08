@@ -2,19 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, KeyRound, ShieldCheck, Plus, Trash2 } from "lucide-react";
+import { Loader2, KeyRound, ShieldCheck, Plus, Trash2, X, UserRound, Phone, Home, Users, FileText } from "lucide-react";
 import { useEnterSubmit } from "@/lib/form-utils";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PhotoUpload } from "@/components/shared/photo-upload";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { PhotoAvatar } from "@/components/shared/photo-crop";
 import { maskCNPJ, maskCPF } from "@/lib/utils";
 import { createResident, updateResident, createResidentLogin } from "@/app/(app)/moradores/actions";
 import type {
@@ -141,93 +142,126 @@ export function ResidentForm({ open, onOpenChange, resident, hasPortalAccess }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{editing ? "Editar morador" : "Novo morador"}</DialogTitle>
-          <DialogDescription>
-            Preencha os dados do morador. Campos com * são obrigatórios.
-          </DialogDescription>
+      <DialogContent
+        className="max-w-2xl"
+        hideClose
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="space-y-0">
+          {/* Banner com gradiente */}
+          <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 px-6 pb-6 pt-7">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-sky-300/10 blur-3xl" />
+
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white/80 backdrop-blur-sm transition-all hover:bg-white/25 hover:text-white"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="relative flex items-center gap-5">
+              <PhotoAvatar
+                value={form.photo_url}
+                onChange={(u) => set("photo_url", u)}
+                name={form.full_name}
+                variant="banner"
+              />
+              <div className="min-w-0 flex-1">
+                <Badge className="mb-2 border-0 bg-white/20 text-white hover:bg-white/30">Morador</Badge>
+                <DialogTitle className="truncate text-2xl font-bold text-white">
+                  {editing ? form.full_name || "Editar morador" : "Novo morador"}
+                </DialogTitle>
+                {editing && (
+                  <div className="mt-2">
+                    <StatusBadge status={form.status} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1" onKeyDown={useEnterSubmit(submit)}>
-          <PhotoUpload
-            value={form.photo_url}
-            onChange={(url) => set("photo_url", url)}
-            folder="residents"
-          />
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nome completo *">
-              <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
-            </Field>
-            <Field label={form.cpf_type === "cnpj" ? "CNPJ *" : "CPF *"}>
-              <div className="flex gap-2">
-                <Select
-                  value={form.cpf_type}
-                  onValueChange={(v) => {
-                    set("cpf_type", v as CpfCnpjKind);
-                    set("cpf", "");
-                  }}
-                >
-                  <SelectTrigger className="w-[100px] shrink-0">
+        <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1" onKeyDown={useEnterSubmit(submit)}>
+          {/* Dados pessoais */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Dados Pessoais</h3>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nome completo *">
+                <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
+              </Field>
+              <Field label={form.cpf_type === "cnpj" ? "CNPJ *" : "CPF *"}>
+                <div className="flex gap-2">
+                  <Select
+                    value={form.cpf_type}
+                    onValueChange={(v) => {
+                      set("cpf_type", v as CpfCnpjKind);
+                      set("cpf", "");
+                    }}
+                  >
+                    <SelectTrigger className="w-[100px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cpf">CPF</SelectItem>
+                      <SelectItem value="cnpj">CNPJ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={form.cpf}
+                    onChange={(e) =>
+                      set("cpf", form.cpf_type === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))
+                    }
+                    placeholder={form.cpf_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                  />
+                </div>
+              </Field>
+              <Field label="Tipo de documento">
+                <Select value={form.document_type} onValueChange={(v) => set("document_type", v as DocumentType)}>
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cpf">CPF</SelectItem>
-                    <SelectItem value="cnpj">CNPJ</SelectItem>
+                    <SelectItem value="rg">RG</SelectItem>
+                    <SelectItem value="cnh">CNH</SelectItem>
                   </SelectContent>
                 </Select>
+              </Field>
+              <Field label="Número do documento">
                 <Input
-                  value={form.cpf}
-                  onChange={(e) =>
-                    set("cpf", form.cpf_type === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))
-                  }
-                  placeholder={form.cpf_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
+                  value={form.document_number ?? ""}
+                  onChange={(e) => set("document_number", e.target.value)}
                 />
-              </div>
-            </Field>
-            <Field label="Tipo de documento">
-              <Select
-                value={form.document_type}
-                onValueChange={(v) => set("document_type", v as DocumentType)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="rg">RG</SelectItem>
-                  <SelectItem value="cnh">CNH</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Número do documento">
-              <Input
-                value={form.document_number ?? ""}
-                onChange={(e) => set("document_number", e.target.value)}
-              />
-            </Field>
-            <Field label="E-mail">
-              <Input
-                type="email"
-                value={form.email ?? ""}
-                onChange={(e) => set("email", e.target.value)}
-              />
-            </Field>
-            <Field label="Status">
-              <Select value={form.status} onValueChange={(v) => set("status", v as "active" | "inactive")}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Ativo</SelectItem>
-                  <SelectItem value="inactive">Inativo</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
+              </Field>
+              <Field label="E-mail">
+                <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} />
+              </Field>
+              <Field label="Status">
+                <Select value={form.status} onValueChange={(v) => set("status", v as "active" | "inactive")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="inactive">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
           </div>
 
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <p className="mb-3 text-sm font-semibold">Telefones</p>
+          {/* Telefones */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Telefones</h3>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Telefone">
                 <div className="flex gap-2">
@@ -266,9 +300,13 @@ export function ResidentForm({ open, onOpenChange, resident, hasPortalAccess }: 
             </div>
           </div>
 
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Residências</p>
+          {/* Residências */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">Residências</h3>
+              </div>
               <Button type="button" variant="outline" size="sm" onClick={addResidence}>
                 <Plus className="h-3.5 w-3.5" /> Adicionar residência
               </Button>
@@ -342,9 +380,13 @@ export function ResidentForm({ open, onOpenChange, resident, hasPortalAccess }: 
             </div>
           </div>
 
-          <div className="rounded-lg border bg-muted/30 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-sm font-semibold">Contatos de familiares</p>
+          {/* Contatos de familiares */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold">Contatos de familiares</h3>
+              </div>
               <Button type="button" variant="outline" size="sm" onClick={addFamilyContact}>
                 <Plus className="h-3.5 w-3.5" /> Adicionar contato
               </Button>
@@ -379,14 +421,23 @@ export function ResidentForm({ open, onOpenChange, resident, hasPortalAccess }: 
             )}
           </div>
 
-          <Field label="Observações">
+          {/* Observações */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Observações</h3>
+            </div>
             <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} />
-          </Field>
+          </div>
 
+          {/* Portal do Morador */}
           {editing && (
-            <div className="rounded-lg border bg-muted/30 p-4">
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">Portal do Morador</p>
+                <div className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="font-semibold">Portal do Morador</h3>
+                </div>
                 {hasPortalAccess ? (
                   <span className="inline-flex items-center gap-1.5 text-sm text-success">
                     <ShieldCheck className="h-4 w-4" /> Já possui acesso ao portal
@@ -400,13 +451,9 @@ export function ResidentForm({ open, onOpenChange, resident, hasPortalAccess }: 
                 )}
               </div>
               {!hasPortalAccess && portalOpen && (
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="E-mail de acesso">
-                    <Input
-                      type="email"
-                      value={portalEmail}
-                      onChange={(e) => setPortalEmail(e.target.value)}
-                    />
+                    <Input type="email" value={portalEmail} onChange={(e) => setPortalEmail(e.target.value)} />
                   </Field>
                   <Field label="Senha">
                     <Input
