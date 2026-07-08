@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Wrench, UserRound } from "lucide-react";
+import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText } from "lucide-react";
 import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { KnownPersonSearch } from "@/components/modules/access/known-person-search";
 import { VisitorForm } from "@/components/modules/visitors/visitor-form";
 import { ProviderForm } from "@/components/modules/providers/provider-form";
@@ -114,7 +116,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   }
 
   function clearSelection() {
-    setForm((f) => ({ ...initialForm(), category: f.category }));
+    setForm(initialForm());
     setRegisterOptionsOpen(false);
   }
 
@@ -127,7 +129,6 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   function submit(e?: React.FormEvent) {
     if (e) e.preventDefault();
 
-    // Validar se pessoa já está dentro
     if (form.existing_person_id) {
       const alreadyInside = inside.some(
         (log) => log.person_id === form.existing_person_id && log.person_type === CATEGORY_TO_PERSON_TYPE[form.category]
@@ -195,24 +196,24 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
       <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Registrar Entrada</DialogTitle>
-            <DialogDescription>Busque ou cadastre uma pessoa</DialogDescription>
+            <DialogTitle className="text-2xl">Registrar Entrada</DialogTitle>
+            <DialogDescription>Selecione ou cadastre uma pessoa</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <KnownPersonSearch onSelect={handleSelectKnown} />
 
             {!registerOptionsOpen ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setRegisterOptionsOpen(true)} className="w-full">
-                <Plus className="h-4 w-4" /> Cadastrar nova pessoa
+              <Button type="button" variant="outline" onClick={() => setRegisterOptionsOpen(true)} className="w-full h-10">
+                <Plus className="h-4 w-4 mr-2" /> Cadastrar nova pessoa
               </Button>
             ) : (
-              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
-                <Button type="button" variant="outline" size="sm" onClick={() => setVisitorFormOpen(true)} className="flex-1">
-                  <UserRound className="h-4 w-4" /> Visitante
+              <div className="grid grid-cols-2 gap-3 rounded-lg border border-dashed p-3">
+                <Button type="button" variant="outline" onClick={() => setVisitorFormOpen(true)} className="h-12">
+                  <UserRound className="h-4 w-4 mr-2" /> Visitante
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={() => setProviderFormOpen(true)} className="flex-1">
-                  <Wrench className="h-4 w-4" /> Prestador
+                <Button type="button" variant="outline" onClick={() => setProviderFormOpen(true)} className="h-12">
+                  <Wrench className="h-4 w-4 mr-2" /> Prestador
                 </Button>
               </div>
             )}
@@ -237,35 +238,47 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Registrar Entrada</DialogTitle>
-          <DialogDescription>{form.full_name}</DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="text-2xl">{form.full_name}</DialogTitle>
+              <DialogDescription className="mt-1">
+                {VISITOR_CATEGORY_LABELS[form.category]} • {form.phone}
+              </DialogDescription>
+            </div>
+            <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+              Trocar
+            </Button>
+          </div>
         </DialogHeader>
 
-        <form onSubmit={submit} className="space-y-6">
-          {/* Pessoa */}
-          <div className="space-y-3 rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Pessoa</h3>
-              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                Trocar
-              </Button>
-            </div>
-            <p className="text-sm text-muted-foreground">{form.full_name}</p>
-            {form.residentName && (
-              <p className="text-sm">
-                Vinculado: <strong>{form.residentName}</strong>
-              </p>
-            )}
-          </div>
+        <form onSubmit={submit} className="space-y-5">
+          {/* Info vinculada */}
+          {form.residentName && (
+            <Card className="border-l-4 border-l-blue-500 bg-blue-50/50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 rounded-full bg-blue-100 p-2">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Morador vinculado</p>
+                  <p className="text-sm text-blue-800">{form.residentName}</p>
+                  {form.residenceLabel && <p className="text-xs text-blue-700 mt-1">{form.residenceLabel}</p>}
+                </div>
+              </div>
+            </Card>
+          )}
 
-          {/* Local */}
-          <div className="space-y-3">
-            <Label>Local de visita *</Label>
+          {/* Local de visita */}
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <Label className="font-semibold">Local de visita</Label>
+            </div>
             <Select value={form.selectedDestinationResidentId || ""} onValueChange={(v) => set("selectedDestinationResidentId", v || null)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o local" />
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione o local a visitar" />
               </SelectTrigger>
               <SelectContent>
                 {form.residentName && (
@@ -278,30 +291,32 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                     {r.full_name}
                   </SelectItem>
                 ))}
-                {units.length > 0 && (
-                  <>
-                    {units.map((u) => (
-                      <SelectItem key={`unit-${u.id}`} value={`unit-${u.id}`}>
-                        {u.unit_type === "apartamento"
-                          ? `Bloco ${u.block}, Apto ${u.apartment}`
-                          : `Quadra ${u.quadra}, Lote ${u.lote}`}
-                        {u.owner_name && ` – ${u.owner_name}`}
-                      </SelectItem>
-                    ))}
-                  </>
+                {units.length > 0 && residents.length > 0 && (
+                  <div className="border-t my-1" />
                 )}
+                {units.map((u) => (
+                  <SelectItem key={`unit-${u.id}`} value={`unit-${u.id}`}>
+                    {u.unit_type === "apartamento"
+                      ? `Bloco ${u.block}, Apto ${u.apartment}`
+                      : `Quadra ${u.quadra}, Lote ${u.lote}`}
+                    {u.owner_name && ` – ${u.owner_name}`}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           {/* Veículo */}
-          <div className="space-y-3">
-            <h3 className="font-semibold">Veículo</h3>
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Car className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Informações do Veículo</h3>
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Tipo</Label>
                 <Select value={form.vehicle_type || "automovel"} onValueChange={(v) => set("vehicle_type", v)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -319,27 +334,50 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                   value={form.vehicle_plate}
                   onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
                   placeholder="ABC1D23"
+                  className="h-10 font-mono text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Marca</Label>
+                <Input
+                  value={form.vehicle_brand}
+                  onChange={(e) => set("vehicle_brand", e.target.value)}
+                  placeholder="Volkswagen"
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Modelo</Label>
+                <Input
+                  value={form.vehicle_model}
+                  onChange={(e) => set("vehicle_model", e.target.value)}
+                  placeholder="Gol"
+                  className="h-10"
                 />
               </div>
             </div>
           </div>
 
           {/* Notas */}
-          <div className="space-y-3">
-            <Label>Notas (opcional)</Label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <Label className="font-semibold">Notas adicionais</Label>
+            </div>
             <Input
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
-              placeholder="Informações adicionais"
+              placeholder="Observações importantes sobre a visita..."
+              className="h-10"
             />
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={close} disabled={pending}>
+          <DialogFooter className="gap-3">
+            <Button type="button" variant="outline" onClick={close} disabled={pending} className="h-10">
               Cancelar
             </Button>
-            <Button type="submit" disabled={pending}>
-              {pending && <Loader2 className="animate-spin" />}
+            <Button type="submit" disabled={pending} className="h-10 min-w-48">
+              {pending && <Loader2 className="animate-spin h-4 w-4 mr-2" />}
               Registrar Entrada
             </Button>
           </DialogFooter>
