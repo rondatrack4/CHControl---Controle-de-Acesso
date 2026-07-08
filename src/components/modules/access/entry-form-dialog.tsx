@@ -276,38 +276,34 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
     <>
       <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
         <DialogContent className="max-w-3xl">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-3">
-                <Badge className="bg-blue-600 hover:bg-blue-700">{VISITOR_CATEGORY_LABELS[form.category]}</Badge>
-                <DialogTitle className="text-3xl font-bold">{form.full_name}</DialogTitle>
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <div className="relative group">
+        <DialogHeader className="space-y-0">
+          {/* Banner com gradiente */}
+          <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 px-6 pb-6 pt-7">
+            {/* Brilho decorativo */}
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-sky-300/10 blur-3xl" />
+
+            <div className="relative flex items-center gap-5">
+              {/* Foto 1:1 */}
+              <div className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setPhotoViewOpen(true)}
-                  className="relative aspect-square h-24 w-24 overflow-hidden rounded-xl border-2 border-border bg-muted transition-all hover:ring-2 ring-blue-400"
+                  className="group relative aspect-square h-24 w-24 overflow-hidden rounded-2xl bg-white/10 shadow-xl ring-2 ring-white/30 transition-all hover:ring-white/60"
                 >
                   {form.photo_url ? (
-                    <img
-                      src={form.photo_url}
-                      alt={form.full_name}
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={form.photo_url} alt={form.full_name} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-muted-foreground">
+                    <div className="flex h-full w-full items-center justify-center bg-white/10 text-2xl font-semibold text-white">
                       {initials(form.full_name)}
                     </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
                     <ZoomIn className="h-5 w-5 text-white" />
                   </div>
                 </button>
-                <label htmlFor="photo-upload" className="absolute -bottom-1 -right-1 cursor-pointer rounded-full bg-blue-600 p-1.5 shadow-lg transition-colors hover:bg-blue-700">
-                  <Camera className="h-4 w-4 text-white" />
+                <label htmlFor="photo-upload" className="absolute -bottom-1.5 -right-1.5 cursor-pointer rounded-full bg-white p-2 shadow-lg ring-1 ring-black/5 transition-transform hover:scale-105">
+                  <Camera className="h-4 w-4 text-blue-700" />
                   <input
                     id="photo-upload"
                     type="file"
@@ -328,8 +324,27 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                   />
                 </label>
               </div>
-              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                Trocar Pessoa
+
+              {/* Nome + info */}
+              <div className="min-w-0 flex-1">
+                <Badge className="mb-2 border-0 bg-white/20 text-white hover:bg-white/30">
+                  {VISITOR_CATEGORY_LABELS[form.category]}
+                </Badge>
+                <DialogTitle className="truncate text-2xl font-bold text-white">{form.full_name}</DialogTitle>
+                {form.phone && (
+                  <p className="mt-1 truncate text-sm text-blue-100/90">{form.phone}</p>
+                )}
+              </div>
+
+              {/* Trocar pessoa */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearSelection}
+                className="shrink-0 self-start text-white/80 hover:bg-white/15 hover:text-white"
+              >
+                Trocar
               </Button>
             </div>
           </div>
