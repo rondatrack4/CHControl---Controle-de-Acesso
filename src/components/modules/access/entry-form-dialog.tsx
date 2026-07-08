@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Wrench, UserRound, X } from "lucide-react";
-import { useEnterSubmit } from "@/lib/form-utils";
+import { Loader2, Plus, Wrench, UserRound } from "lucide-react";
 import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
@@ -23,13 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { KnownPersonSearch } from "@/components/modules/access/known-person-search";
 import { VisitorForm } from "@/components/modules/visitors/visitor-form";
 import { ProviderForm } from "@/components/modules/providers/provider-form";
-import { registerEntry, checkRecurringAuthToday, type KnownPersonResult } from "@/app/(app)/acessos/actions";
-import { initials, maskCPF, maskCNPJ, residenceLabel } from "@/lib/utils";
+import { registerEntry, type KnownPersonResult } from "@/app/(app)/acessos/actions";
+import { residenceLabel } from "@/lib/utils";
 import { playEntrySound } from "@/lib/sound";
 import { VISITOR_CATEGORY_LABELS, CATEGORY_TO_PERSON_TYPE } from "@/lib/constants";
 import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType, Unit, AccessLog } from "@/lib/database.types";
@@ -71,7 +68,6 @@ function initialForm() {
     expected_exit_at: "",
     priority: "normal" as "normal" | "urgente",
     destinations: [emptyDestination()],
-    lastVisit: null as { at: string; label: string | null } | null,
     residentName: null as string | null,
     residenceLabel: null as string | null,
     selectedDestinationResidentId: null as string | null,
@@ -84,9 +80,8 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   const [registerOptionsOpen, setRegisterOptionsOpen] = useState(false);
   const [visitorFormOpen, setVisitorFormOpen] = useState(false);
   const [providerFormOpen, setProviderFormOpen] = useState(false);
-  const [recurringBlockReason, setRecurringBlockReason] = useState<string | null>(null);
 
-  function set<K extends keyof ReturnType<typeof initialForm>>(key: K, value: ReturnType<typeof initialForm>[K]) {
+  function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
@@ -96,61 +91,17 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
       existing_person_id: person.id,
       category: person.category,
       full_name: person.full_name,
-      cpf: person.cpf ?? "",
-      cpf_type: person.cpf_type,
-      document_type: person.document_type,
-      document_number: person.document_number ?? "",
-      phone: person.phone ?? "",
-      photo_url: person.photo_url,
-      company_name: person.company_name ?? "",
-      service_type: person.service_type ?? "",
-      vehicle_type: person.vehicle_type ?? "automovel",
-      vehicle_plate: person.vehicle_plate ?? "",
-      vehicle_brand: person.vehicle_brand ?? "",
-      vehicle_model: person.vehicle_model ?? "",
-      vehicle_color: person.vehicle_color ?? "",
-      lastVisit: person.last_visit_at ? { at: person.last_visit_at, label: person.last_destination_label } : null,
       residentName: person.residentName ?? null,
       residenceLabel: person.residenceLabel ?? null,
       selectedDestinationResidentId: null,
     }));
-
-    // Verificar recurring auth
-    startTransition(async () => {
-      const result = await checkRecurringAuthToday(person.id, person.person_type);
-      setRecurringBlockReason(result.blocked ? result.reason ?? "Acesso não permitido." : null);
-    });
-
     setRegisterOptionsOpen(false);
     setVisitorFormOpen(false);
     setProviderFormOpen(false);
   }
 
   function clearSelection() {
-    setForm((f) => ({
-      ...f,
-      existing_person_id: null,
-      category: "visitante",
-      full_name: "",
-      cpf: "",
-      cpf_type: "cpf",
-      document_type: "rg",
-      document_number: "",
-      phone: "",
-      photo_url: null,
-      company_name: "",
-      service_type: "",
-      vehicle_type: "automovel",
-      vehicle_plate: "",
-      vehicle_brand: "",
-      vehicle_model: "",
-      vehicle_color: "",
-      lastVisit: null,
-      residentName: null,
-      residenceLabel: null,
-      selectedDestinationResidentId: null,
-    }));
-    setRecurringBlockReason(null);
+    setForm((f) => ({ ...initialForm(), category: f.category }));
     setRegisterOptionsOpen(false);
   }
 
@@ -160,20 +111,23 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
     setRegisterOptionsOpen(false);
   }
 
-  function submit() {
+  function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
+
     // Validar se pessoa já está dentro
     if (form.existing_person_id) {
-      const alreadyInside = inside.some(log => log.person_id === form.existing_person_id && log.person_type === CATEGORY_TO_PERSON_TYPE[form.category]);
+      const alreadyInside = inside.some(
+        (log) => log.person_id === form.existing_person_id && log.person_type === CATEGORY_TO_PERSON_TYPE[form.category]
+      );
       if (alreadyInside) {
         toast.error("Esta pessoa já está registrada como dentro do condomínio.");
         return;
       }
     }
 
-    // Se selecionou um destino diferente, atualiza o primeiro
     let destinations = form.destinations;
     if (form.selectedDestinationResidentId) {
-      const selectedResident = residents.find(r => r.id === form.selectedDestinationResidentId);
+      const selectedResident = residents.find((r) => r.id === form.selectedDestinationResidentId);
       if (selectedResident) {
         destinations = [
           {
@@ -223,228 +177,161 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
     });
   }
 
+  if (!form.existing_person_id) {
+    return (
+      <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Registrar Entrada</DialogTitle>
+            <DialogDescription>Busque ou cadastre uma pessoa</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <KnownPersonSearch onSelect={handleSelectKnown} />
+
+            {!registerOptionsOpen ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setRegisterOptionsOpen(true)} className="w-full">
+                <Plus className="h-4 w-4" /> Cadastrar nova pessoa
+              </Button>
+            ) : (
+              <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => setVisitorFormOpen(true)} className="flex-1">
+                  <UserRound className="h-4 w-4" /> Visitante
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => setProviderFormOpen(true)} className="flex-1">
+                  <Wrench className="h-4 w-4" /> Prestador
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <VisitorForm
+            open={visitorFormOpen}
+            onOpenChange={setVisitorFormOpen}
+            residents={residents}
+            onCreated={handleSelectKnown}
+          />
+          <ProviderForm
+            open={providerFormOpen}
+            onOpenChange={setProviderFormOpen}
+            residents={residents}
+            onCreated={handleSelectKnown}
+          />
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Registrar Entrada</DialogTitle>
-          <DialogDescription>
-            Busque um cadastro existente para autopreencher os dados. Se não encontrar, cadastre um novo visitante ou prestador.
-          </DialogDescription>
+          <DialogDescription>{form.full_name}</DialogDescription>
         </DialogHeader>
 
-        <form className="max-h-[70vh] space-y-6 overflow-y-auto pr-1" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <form onSubmit={submit} className="space-y-6">
           {/* Pessoa */}
-          <section className="space-y-4">
-            <p className="text-sm font-semibold">Pessoa</p>
-
-            {form.existing_person_id ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-                  <Avatar className="h-11 w-11">
-                    <AvatarImage src={form.photo_url ?? undefined} alt={form.full_name} />
-                    <AvatarFallback>{initials(form.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <p className="truncate font-medium">{form.full_name}</p>
-                      <Badge variant="outline" className="text-[10px]">
-                        {VISITOR_CATEGORY_LABELS[form.category]}
-                      </Badge>
-                      <Badge variant="secondary" className="text-[10px]">Cadastro existente</Badge>
-                    </div>
-                    {form.lastVisit && (
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        Última visita em {new Date(form.lastVisit.at).toLocaleString("pt-BR")}
-                        {form.lastVisit.label ? ` · ${form.lastVisit.label}` : ""}
-                      </p>
-                    )}
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-                    <X className="h-3.5 w-3.5" /> Trocar
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  Dados pré-preenchidos do cadastro. Ajustes feitos aqui valem só para esta entrada — o cadastro
-                  original não é alterado.
-                </p>
-
-                {form.residentName && (
-                  <div className="rounded-lg bg-blue-50 p-3 text-sm">
-                    <p className="font-medium text-blue-900">Morador vinculado:</p>
-                    <p className="text-blue-800">{form.residentName}</p>
-                    {form.residenceLabel && <p className="text-xs text-blue-700">{form.residenceLabel}</p>}
-                  </div>
-                )}
-
-                {form.existing_person_id && (
-                  <div className="space-y-2">
-                    <Label>Local de visita *</Label>
-                    <Select value={form.selectedDestinationResidentId || ""} onValueChange={(v) => set("selectedDestinationResidentId", v || null)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o local a visitar" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {form.residentName && (
-                          <SelectItem value={form.residentName}>
-                            {form.residentName} (vinculado)
-                          </SelectItem>
-                        )}
-                        <optgroup label="Moradores">
-                          {residents.map((r) => (
-                            <SelectItem key={r.id} value={r.id}>
-                              {r.full_name} – {r.block ? `Bloco ${r.block}, Apto ${r.apartment}` : `Quadra ${r.quadra}, Lote ${r.lote}`}
-                            </SelectItem>
-                          ))}
-                        </optgroup>
-                        {units.length > 0 && (
-                          <optgroup label="Unidades (sem proprietário)">
-                            {units.map((u) => (
-                              <SelectItem key={`unit-${u.id}`} value={`unit-${u.id}`}>
-                                {u.unit_type === "apartamento"
-                                  ? `Bloco ${u.block}, Apto ${u.apartment}`
-                                  : `Quadra ${u.quadra}, Lote ${u.lote}`}
-                                {u.owner_name && ` – ${u.owner_name}`}
-                              </SelectItem>
-                            ))}
-                          </optgroup>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {recurringBlockReason && (
-                  <div className="rounded-lg bg-red-50 p-3 text-sm border border-red-200">
-                    <p className="font-medium text-red-900">⛔ {recurringBlockReason}</p>
-                  </div>
-                )}
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Nome</Label>
-                    <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Documento (CPF/CNPJ)</Label>
-                    <div className="flex gap-2">
-                      <Select value={form.cpf_type} onValueChange={(v) => set("cpf_type", v as CpfCnpjKind)}>
-                        <SelectTrigger className="w-[100px] shrink-0">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cpf">CPF</SelectItem>
-                          <SelectItem value="cnpj">CNPJ</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        value={form.cpf}
-                        onChange={(e) => set("cpf", form.cpf_type === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Telefone</Label>
-                    <Input value={form.phone} onChange={(e) => set("phone", e.target.value)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Empresa</Label>
-                    <Input
-                      value={form.company_name}
-                      onChange={(e) => set("company_name", e.target.value)}
-                      placeholder="Ex.: Uber, iFood, HidroFix Ltda"
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-lg border bg-muted/30 p-4">
-                  <p className="mb-3 text-sm font-semibold">Veículo</p>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="space-y-1.5">
-                      <Label>Tipo</Label>
-                      <Select value={form.vehicle_type || "automovel"} onValueChange={(v) => set("vehicle_type", v)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="automovel">Automóvel</SelectItem>
-                          <SelectItem value="moto">Moto</SelectItem>
-                          <SelectItem value="caminhao">Caminhão</SelectItem>
-                          <SelectItem value="bicicleta">Bicicleta</SelectItem>
-                          <SelectItem value="outro">Outro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Placa</Label>
-                      <Input
-                        value={form.vehicle_plate}
-                        onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
-                        placeholder="ABC1D23"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Marca</Label>
-                      <Input value={form.vehicle_brand} onChange={(e) => set("vehicle_brand", e.target.value)} placeholder="Volkswagen" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Modelo</Label>
-                      <Input value={form.vehicle_model} onChange={(e) => set("vehicle_model", e.target.value)} placeholder="Gol" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label>Cor</Label>
-                      <Input value={form.vehicle_color} onChange={(e) => set("vehicle_color", e.target.value)} placeholder="Prata" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <KnownPersonSearch onSelect={handleSelectKnown} />
-                {!registerOptionsOpen ? (
-                  <Button type="button" variant="outline" size="sm" onClick={() => setRegisterOptionsOpen(true)}>
-                    <Plus className="h-3.5 w-3.5" /> Cadastrar
-                  </Button>
-                ) : (
-                  <div className="flex flex-wrap gap-2 rounded-lg border bg-muted/30 p-3">
-                    <p className="w-full text-xs text-muted-foreground">Cadastrar novo:</p>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setVisitorFormOpen(true)}>
-                      <UserRound className="h-3.5 w-3.5" /> Visitante
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => setProviderFormOpen(true)}>
-                      <Wrench className="h-3.5 w-3.5" /> Prestador
-                    </Button>
-                  </div>
-                )}
-              </>
+          <div className="space-y-3 rounded-lg border p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Pessoa</h3>
+              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                Trocar
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">{form.full_name}</p>
+            {form.residentName && (
+              <p className="text-sm">
+                Vinculado: <strong>{form.residentName}</strong>
+              </p>
             )}
-          </section>
+          </div>
+
+          {/* Local */}
+          <div className="space-y-3">
+            <Label>Local de visita *</Label>
+            <Select value={form.selectedDestinationResidentId || ""} onValueChange={(v) => set("selectedDestinationResidentId", v || null)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o local" />
+              </SelectTrigger>
+              <SelectContent>
+                {form.residentName && (
+                  <SelectItem value={form.residentName}>
+                    {form.residentName} (vinculado)
+                  </SelectItem>
+                )}
+                {residents.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.full_name}
+                  </SelectItem>
+                ))}
+                {units.length > 0 && (
+                  <>
+                    {units.map((u) => (
+                      <SelectItem key={`unit-${u.id}`} value={`unit-${u.id}`}>
+                        {u.unit_type === "apartamento"
+                          ? `Bloco ${u.block}, Apto ${u.apartment}`
+                          : `Quadra ${u.quadra}, Lote ${u.lote}`}
+                        {u.owner_name && ` – ${u.owner_name}`}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Veículo */}
+          <div className="space-y-3">
+            <h3 className="font-semibold">Veículo</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={form.vehicle_type || "automovel"} onValueChange={(v) => set("vehicle_type", v)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="automovel">Automóvel</SelectItem>
+                    <SelectItem value="moto">Moto</SelectItem>
+                    <SelectItem value="caminhao">Caminhão</SelectItem>
+                    <SelectItem value="bicicleta">Bicicleta</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Placa</Label>
+                <Input
+                  value={form.vehicle_plate}
+                  onChange={(e) => set("vehicle_plate", maskPlate(e.target.value))}
+                  placeholder="ABC1D23"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Notas */}
+          <div className="space-y-3">
+            <Label>Notas (opcional)</Label>
+            <Input
+              value={form.notes}
+              onChange={(e) => set("notes", e.target.value)}
+              placeholder="Informações adicionais"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={close} disabled={pending}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending && <Loader2 className="animate-spin" />}
+              Registrar Entrada
+            </Button>
+          </DialogFooter>
         </form>
-
-        <DialogFooter className="mt-2 gap-2">
-          <Button variant="outline" type="button" onClick={close} disabled={pending}>
-            Cancelar
-          </Button>
-          <Button type="submit" disabled={pending || !!recurringBlockReason}>
-            {pending && <Loader2 className="animate-spin" />}
-            Registrar Entrada
-          </Button>
-        </DialogFooter>
       </DialogContent>
-
-      <VisitorForm
-        open={visitorFormOpen}
-        onOpenChange={setVisitorFormOpen}
-        residents={residents}
-        onCreated={handleSelectKnown}
-      />
-      <ProviderForm
-        open={providerFormOpen}
-        onOpenChange={setProviderFormOpen}
-        residents={residents}
-        onCreated={handleSelectKnown}
-      />
     </Dialog>
   );
 }
