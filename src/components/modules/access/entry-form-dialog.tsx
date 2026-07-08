@@ -278,9 +278,8 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
         <DialogContent
           className="max-w-3xl"
           hideClose
-          onInteractOutside={(e) => {
-            if (photoViewOpen || photoCropOpen) e.preventDefault();
-          }}
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
         >
         <DialogHeader className="space-y-0">
           {/* Banner com gradiente */}
