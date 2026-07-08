@@ -275,13 +275,29 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
   return (
     <>
       <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent
+          className="max-w-3xl"
+          hideClose
+          onInteractOutside={(e) => {
+            if (photoViewOpen || photoCropOpen) e.preventDefault();
+          }}
+        >
         <DialogHeader className="space-y-0">
           {/* Banner com gradiente */}
           <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 px-6 pb-6 pt-7">
             {/* Brilho decorativo */}
             <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-sky-300/10 blur-3xl" />
+
+            {/* Fechar */}
+            <button
+              type="button"
+              onClick={close}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white/80 backdrop-blur-sm transition-all hover:bg-white/25 hover:text-white"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
 
             <div className="relative flex items-center gap-5">
               {/* Foto 1:1 */}
@@ -331,9 +347,6 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                   {VISITOR_CATEGORY_LABELS[form.category]}
                 </Badge>
                 <DialogTitle className="truncate text-2xl font-bold text-white">{form.full_name}</DialogTitle>
-                {form.phone && (
-                  <p className="mt-1 truncate text-sm text-blue-100/90">{form.phone}</p>
-                )}
               </div>
 
               {/* Trocar pessoa */}
@@ -342,7 +355,7 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
                 variant="ghost"
                 size="sm"
                 onClick={clearSelection}
-                className="shrink-0 self-start text-white/80 hover:bg-white/15 hover:text-white"
+                className="mt-8 shrink-0 self-start text-white/80 hover:bg-white/15 hover:text-white"
               >
                 Trocar
               </Button>
