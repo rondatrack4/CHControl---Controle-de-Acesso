@@ -621,7 +621,7 @@ function PhotoCropModal({
   const [offsetY, setOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const canvasRef = useState<HTMLCanvasElement | null>(null);
+  const containerRef = useState<HTMLDivElement | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     setIsDragging(true);
@@ -639,39 +639,40 @@ function PhotoCropModal({
   };
 
   const handleCrop = () => {
-    if (!imageUrl) return;
+    if (!imageUrl || !containerRef[1]) return;
 
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const cropSize = 300;
-      canvas.width = cropSize;
-      canvas.height = cropSize;
-      const ctx = canvas.getContext("2d")!;
+      try {
+        const canvas = document.createElement("canvas");
+        const cropSize = 300;
+        canvas.width = cropSize;
+        canvas.height = cropSize;
+        const ctx = canvas.getContext("2d")!;
 
-      const imgWidth = (img.width * zoom) / 100;
-      const imgHeight = (img.height * zoom) / 100;
-      const containerWidth = 300;
-      const containerHeight = 300;
+        // Calcular posição da imagem no canvas
+        const imgWidth = (img.width * zoom) / 100;
+        const imgHeight = (img.height * zoom) / 100;
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Posição central - metade do tamanho da imagem + offset
+        const drawX = 150 - imgWidth / 2 + offsetX;
+        const drawY = 150 - imgHeight / 2 + offsetY;
 
-      const centerX = containerWidth / 2 - imgWidth / 2;
-      const centerY = containerHeight / 2 - imgHeight / 2;
+        // Desenhar fundo branco
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, cropSize, cropSize);
 
-      ctx.drawImage(
-        img,
-        centerX + offsetX,
-        centerY + offsetY,
-        imgWidth,
-        imgHeight
-      );
+        // Desenhar imagem
+        ctx.drawImage(img, drawX, drawY, imgWidth, imgHeight);
 
-      const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      onCrop(croppedDataUrl);
-      onOpenChange(false);
+        const croppedDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+        onCrop(croppedDataUrl);
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Erro ao cortar imagem:", error);
+      }
     };
+    img.crossOrigin = "anonymous";
     img.src = imageUrl;
   };
 
@@ -679,7 +680,11 @@ function PhotoCropModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl" onEscapeKeyDown={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-w-xl"
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Cortar Foto</DialogTitle>
           <DialogDescription>Arraste a imagem para posicionar dentro do quadrado</DialogDescription>
@@ -756,11 +761,23 @@ function PhotoCropModal({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenChange(false);
+              }}
             >
               Cancelar
             </Button>
-            <Button type="button" onClick={handleCrop} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleCrop();
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               Confirmar Corte
             </Button>
           </DialogFooter>
