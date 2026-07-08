@@ -277,17 +277,11 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
       <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
         <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex-1">
-              <DialogTitle className="text-2xl">{form.full_name}</DialogTitle>
-              <div className="flex flex-wrap items-center gap-3 mt-2">
-                <Badge variant="outline">{VISITOR_CATEGORY_LABELS[form.category]}</Badge>
-                {form.cpf && <Badge variant="secondary" className="font-mono text-xs">{form.cpf}</Badge>}
-                {form.document_number && (
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    {form.document_type === "rg" ? "RG" : "Doc"}: {form.document_number}
-                  </Badge>
-                )}
+              <div className="flex items-center gap-3">
+                <Badge className="bg-blue-600 hover:bg-blue-700">{VISITOR_CATEGORY_LABELS[form.category]}</Badge>
+                <DialogTitle className="text-3xl font-bold">{form.full_name}</DialogTitle>
               </div>
             </div>
             <div className="flex flex-col gap-2">
