@@ -29,7 +29,7 @@ import { KnownPersonSearch } from "@/components/modules/access/known-person-sear
 import { VisitorForm } from "@/components/modules/visitors/visitor-form";
 import { ProviderForm } from "@/components/modules/providers/provider-form";
 import { registerEntry, checkRecurringAuthToday, type KnownPersonResult } from "@/app/(app)/acessos/actions";
-import { initials, maskCPF, maskCNPJ } from "@/lib/utils";
+import { initials, maskCPF, maskCNPJ, residenceLabel } from "@/lib/utils";
 import { playEntrySound } from "@/lib/sound";
 import { VISITOR_CATEGORY_LABELS, CATEGORY_TO_PERSON_TYPE } from "@/lib/constants";
 import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType } from "@/lib/database.types";
@@ -72,6 +72,7 @@ function initialForm() {
     lastVisit: null as { at: string; label: string | null } | null,
     residentName: null as string | null,
     residenceLabel: null as string | null,
+    selectedDestinationResidentId: null as string | null,
   };
 }
 
@@ -109,6 +110,7 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
       lastVisit: person.last_visit_at ? { at: person.last_visit_at, label: person.last_destination_label } : null,
       residentName: person.residentName ?? null,
       residenceLabel: person.residenceLabel ?? null,
+      selectedDestinationResidentId: null,
     }));
 
     // Verificar recurring auth
@@ -144,6 +146,7 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
       lastVisit: null,
       residentName: null,
       residenceLabel: null,
+      selectedDestinationResidentId: null,
     }));
     setRecurringBlockReason(null);
     setRegisterOptionsOpen(false);
@@ -156,6 +159,22 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
   }
 
   function submit() {
+    // Se selecionou um destino diferente, atualiza o primeiro
+    let destinations = form.destinations;
+    if (form.selectedDestinationResidentId) {
+      const selectedResident = residents.find(r => r.id === form.selectedDestinationResidentId);
+      if (selectedResident) {
+        destinations = [
+          {
+            ...form.destinations[0],
+            resident_id: selectedResident.id,
+            location_label: residenceLabel(selectedResident),
+          },
+          ...form.destinations.slice(1),
+        ];
+      }
+    }
+
     startTransition(async () => {
       const res = await registerEntry({
         person: {
@@ -181,7 +200,7 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
         notes: form.notes,
         expected_exit_at: form.expected_exit_at ? new Date(form.expected_exit_at).toISOString() : null,
         priority: form.priority,
-        destinations: form.destinations,
+        destinations,
       });
       if (res.ok) {
         playEntrySound();
@@ -245,6 +264,29 @@ export function EntryFormDialog({ open, onOpenChange, residents }: EntryFormDial
                     <p className="font-medium text-blue-900">Morador vinculado:</p>
                     <p className="text-blue-800">{form.residentName}</p>
                     {form.residenceLabel && <p className="text-xs text-blue-700">{form.residenceLabel}</p>}
+                  </div>
+                )}
+
+                {form.existing_person_id && (
+                  <div className="space-y-2">
+                    <Label>Local de visita *</Label>
+                    <Select value={form.selectedDestinationResidentId || ""} onValueChange={(v) => set("selectedDestinationResidentId", v || null)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o local a visitar" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {form.residentName && (
+                          <SelectItem value={form.residentName}>
+                            📍 {form.residentName} (vinculado)
+                          </SelectItem>
+                        )}
+                        {residents.map((r) => (
+                          <SelectItem key={r.id} value={r.id}>
+                            📍 {r.full_name} ({r.block ? `Bloco ${r.block}, Apto ${r.apartment}` : `Quadra ${r.quadra}, Lote ${r.lote}`})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 )}
 
