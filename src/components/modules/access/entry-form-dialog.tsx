@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X } from "lucide-react";
+import { Loader2, Plus, Wrench, UserRound, MapPin, Car, FileText, Edit2, Check, X, Camera } from "lucide-react";
 import { maskPlate } from "@/lib/masks";
 import {
   Dialog,
@@ -24,11 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { KnownPersonSearch } from "@/components/modules/access/known-person-search";
 import { VisitorForm } from "@/components/modules/visitors/visitor-form";
 import { ProviderForm } from "@/components/modules/providers/provider-form";
 import { registerEntry, type KnownPersonResult } from "@/app/(app)/acessos/actions";
-import { residenceLabel } from "@/lib/utils";
+import { residenceLabel, initials } from "@/lib/utils";
 import { playEntrySound } from "@/lib/sound";
 import { VISITOR_CATEGORY_LABELS, CATEGORY_TO_PERSON_TYPE } from "@/lib/constants";
 import type { Resident, VisitorCategory, CpfCnpjKind, DocumentType, Unit, AccessLog } from "@/lib/database.types";
@@ -241,16 +242,43 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(o) : close())}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
               <DialogTitle className="text-2xl">{form.full_name}</DialogTitle>
               <DialogDescription className="mt-1">
                 {VISITOR_CATEGORY_LABELS[form.category]}
               </DialogDescription>
             </div>
-            <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
-              Trocar
-            </Button>
+            <div className="flex flex-col gap-2">
+              <div className="relative">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={form.photo_url ?? undefined} alt={form.full_name} />
+                  <AvatarFallback className="text-lg">{initials(form.full_name)}</AvatarFallback>
+                </Avatar>
+                <label htmlFor="photo-upload" className="absolute bottom-0 right-0 rounded-full bg-blue-600 p-1.5 cursor-pointer hover:bg-blue-700 transition-colors">
+                  <Camera className="h-4 w-4 text-white" />
+                  <input
+                    id="photo-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                          set("photo_url", evt.target?.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={clearSelection}>
+                Trocar Pessoa
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
