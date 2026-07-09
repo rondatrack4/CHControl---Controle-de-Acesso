@@ -126,8 +126,10 @@ pub fn run() {
                 )?;
             }
 
-            // Pasta de dados do app (SQLite + mídia) em %APPDATA%/CHControl.
-            let data_dir = app.path().app_data_dir()?;
+            // Pasta de dados FIXA em %APPDATA%/CHControl — estável entre versões e
+            // reinstalações (NÃO usa app_data_dir(), que deriva do identifier do
+            // bundle e mudava a pasta a cada build, "resetando" os dados).
+            let data_dir = app.path().data_dir()?.join("CHControl");
             std::fs::create_dir_all(&data_dir).ok();
 
             // Em dev, o Next roda via `beforeDevCommand` (npm run dev, porta 3000).
