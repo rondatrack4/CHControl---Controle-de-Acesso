@@ -6,14 +6,11 @@ import {
   Area,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
   Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
 } from "recharts";
 import { TrendingUp, CalendarDays, Users, Clock, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +22,7 @@ const CORRESPONDENCE_COLORS: Record<string, string> = {
   "Em Armazenamento": "#8b5cf6",
   "Aguardando Retirada": "#f59e0b",
   Entregue: "#16a34a",
-  Outros: "#ef4444",
+  Outros: "#94a3b8",
 };
 
 interface ChartsProps {
@@ -76,6 +73,44 @@ const tooltipStyle = {
   border: "1px solid hsl(var(--border))",
   boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
 };
+
+/** Lista de distribuição com barra de progresso — leitura rápida, sem gráfico de pizza. */
+function DistributionList({
+  items,
+  colorFor,
+}: {
+  items: { name: string; value: number }[];
+  colorFor: (name: string, index: number) => string;
+}) {
+  const total = items.reduce((a, i) => a + i.value, 0) || 1;
+  return (
+    <div className="space-y-3.5 py-2">
+      {items.map((item, i) => {
+        const pct = Math.round((item.value / total) * 100);
+        const color = colorFor(item.name, i);
+        return (
+          <div key={item.name} className="space-y-1.5">
+            <div className="flex items-center justify-between text-sm">
+              <span className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
+                <span className="font-medium">{item.name}</span>
+              </span>
+              <span className="tabular-nums text-muted-foreground">
+                <span className="font-semibold text-foreground">{item.value}</span> · {pct}%
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${pct}%`, background: color }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function DashboardCharts({
   entriesPerDay,
@@ -147,27 +182,24 @@ export function DashboardCharts({
         <ChartCardHeader icon={Users} title="Tipos de acesso" total={accessTypesTotal} totalLabel="registros" />
         <CardContent>
           <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie
-                data={accessTypes}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={50}
-                outerRadius={90}
-                paddingAngle={3}
-                cornerRadius={6}
-                label={(e) => `${e.name}: ${e.value}`}
+            <BarChart data={accessTypes} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+              <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+              <YAxis
+                type="category"
+                dataKey="name"
                 fontSize={12}
-              >
+                tickLine={false}
+                axisLine={false}
+                width={80}
+              />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(37,99,235,0.06)" }} />
+              <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={34}>
                 {accessTypes.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="transparent" />
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
-              </Pie>
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
@@ -198,7 +230,7 @@ export function DashboardCharts({
         </CardContent>
       </Card>
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden lg:col-span-2">
         <ChartCardHeader
           icon={Package}
           title="Correspondências por status"
@@ -206,29 +238,10 @@ export function DashboardCharts({
           totalLabel="correspondências"
         />
         <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie
-                data={correspondenceStatus}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={90}
-                paddingAngle={3}
-                cornerRadius={6}
-                label={(e) => `${e.name}: ${e.value}`}
-                fontSize={12}
-              >
-                {correspondenceStatus.map((entry, i) => (
-                  <Cell key={i} fill={CORRESPONDENCE_COLORS[entry.name] ?? COLORS[i % COLORS.length]} stroke="transparent" />
-                ))}
-              </Pie>
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
+          <DistributionList
+            items={correspondenceStatus}
+            colorFor={(name, i) => CORRESPONDENCE_COLORS[name] ?? COLORS[i % COLORS.length]}
+          />
         </CardContent>
       </Card>
     </div>

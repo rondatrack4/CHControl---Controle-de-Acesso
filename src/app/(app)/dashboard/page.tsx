@@ -146,7 +146,7 @@ export default async function DashboardPage() {
 
   const dateLabel = now.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
   const timeLabel = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  const firstName = session.profile.full_name.split(" ")[0] || "Porteiro";
+  const firstName = session.profile.full_name.split(" ")[0] || "Controlador(a)";
   const hour = now.getHours();
   const period: "morning" | "afternoon" | "night" = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "night";
 
