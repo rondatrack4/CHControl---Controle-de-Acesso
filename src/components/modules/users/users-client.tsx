@@ -26,9 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import type { Profile } from "@/lib/database.types";
-
-const ROLE_LABELS: Record<string, string> = { admin: "Administrador", porter: "Controlador(a) de Acesso" };
+import { roleLabel, GENDER_LABELS } from "@/lib/constants";
+import type { Profile, Gender } from "@/lib/database.types";
 
 export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; currentUserId: string }) {
   const [open, setOpen] = useState(false);
@@ -36,11 +35,12 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"porter" | "admin">("porter");
+  const [gender, setGender] = useState<Gender | "">("");
   const [pending, startTransition] = useTransition();
 
   function submit() {
     startTransition(async () => {
-      const res = await createStaffLogin(name, email, password, role);
+      const res = await createStaffLogin(name, email, password, role, gender || null);
       if (res.ok) {
         toast.success("Usuário criado.");
         setOpen(false);
@@ -48,6 +48,7 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
         setEmail("");
         setPassword("");
         setRole("porter");
+        setGender("");
       } else {
         toast.error(res.error ?? "Falha ao criar usuário.");
       }
@@ -99,7 +100,7 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">{p.email}</TableCell>
-                <TableCell>{ROLE_LABELS[p.role] ?? p.role}</TableCell>
+                <TableCell>{roleLabel(p.role, p.gender)}</TableCell>
                 <TableCell>
                   <Badge variant={p.status === "active" ? "default" : "secondary"}>
                     {p.status === "active" ? "Ativo" : "Inativo"}
@@ -137,17 +138,31 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
               <Label htmlFor="u-pass">Senha (mín. 6 caracteres)</Label>
               <Input id="u-pass" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
             </div>
-            <div className="space-y-2">
-              <Label>Perfil</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as "porter" | "admin")}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="porter">Controlador(a) de Acesso</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Perfil</Label>
+                <Select value={role} onValueChange={(v) => setRole(v as "porter" | "admin")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="porter">Controlador(a) de Acesso</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Gênero</Label>
+                <Select value={gender} onValueChange={(v) => setGender(v as Gender)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Não informado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">{GENDER_LABELS.male}</SelectItem>
+                    <SelectItem value="female">{GENDER_LABELS.female}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <DialogFooter>

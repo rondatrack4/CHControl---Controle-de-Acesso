@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSession } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
-import type { UserRole } from "@/lib/database.types";
+import type { UserRole, Gender } from "@/lib/database.types";
 
 export interface ActionResult {
   ok: boolean;
@@ -21,7 +21,8 @@ export async function createStaffLogin(
   name: string,
   email: string,
   password: string,
-  role: "porter" | "admin"
+  role: "porter" | "admin",
+  gender: Gender | null = null
 ): Promise<ActionResult> {
   const session = await requireSession();
   if (session.profile.role !== "admin" && session.profile.role !== "superadmin") {
@@ -49,6 +50,7 @@ export async function createStaffLogin(
     full_name: name,
     email,
     role,
+    gender,
     status: "active",
   });
   if (error) {
