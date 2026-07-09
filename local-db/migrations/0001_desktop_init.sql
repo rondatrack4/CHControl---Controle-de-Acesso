@@ -49,6 +49,7 @@ CREATE TABLE profiles (
   status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
   resident_id   TEXT REFERENCES residents(id) ON DELETE CASCADE,
   photo_url     TEXT,
+  gender        TEXT CHECK (gender IN ('male', 'female')),
   created_at    TEXT NOT NULL,
   updated_at    TEXT NOT NULL
 );

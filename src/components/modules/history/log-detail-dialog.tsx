@@ -52,11 +52,11 @@ export function LogDetailDialog({ open, onOpenChange, log }: LogDetailDialogProp
               <p>{log.reason ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Porteiro (entrada)</p>
+              <p className="text-xs text-muted-foreground">Controlador(a) (entrada)</p>
               <p>{log.entry_porter_name ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Porteiro (saída)</p>
+              <p className="text-xs text-muted-foreground">Controlador(a) (saída)</p>
               <p>{log.exit_porter_name ?? "—"}</p>
             </div>
             {log.expected_exit_at && (

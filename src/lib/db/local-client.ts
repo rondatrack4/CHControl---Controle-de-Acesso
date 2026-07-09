@@ -760,8 +760,19 @@ export function getLocalDb(): Database.Database {
     db.exec(fs.readFileSync(migrationPath, "utf-8"));
   }
 
+  // Migrações idempotentes para bancos já existentes (colunas novas).
+  ensureColumn(db, "profiles", "gender", "TEXT");
+
   dbInstance = db;
   return db;
+}
+
+/** Adiciona uma coluna a uma tabela apenas se ainda não existir (seguro em bancos antigos). */
+function ensureColumn(db: Database.Database, table: string, column: string, decl: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+  }
 }
 
 /** Equivalente local a `createClient()` — mesma assinatura `async`, mesmo formato de retorno. */

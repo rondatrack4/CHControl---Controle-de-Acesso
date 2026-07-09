@@ -28,14 +28,8 @@ import {
   playSoundTone,
   type SoundTone,
 } from "@/lib/sound";
-import type { Profile } from "@/lib/database.types";
-
-const ROLE_LABELS: Record<string, string> = {
-  superadmin: "Superadministrador",
-  admin: "Administrador",
-  porter: "Porteiro",
-  resident: "Morador",
-};
+import { roleLabel, GENDER_LABELS } from "@/lib/constants";
+import type { Profile, Gender } from "@/lib/database.types";
 
 interface SettingsClientProps {
   profile: Profile;
@@ -46,6 +40,7 @@ interface SettingsClientProps {
 export function SettingsClient({ profile, email, companyName }: SettingsClientProps) {
   const [fullName, setFullName] = useState(profile.full_name);
   const [photoUrl, setPhotoUrl] = useState<string | null>(profile.photo_url);
+  const [gender, setGender] = useState<Gender | null>(profile.gender);
   const [pending, startTransition] = useTransition();
 
   const [soundEnabled, setSoundEnabledState] = useState(true);
@@ -62,7 +57,7 @@ export function SettingsClient({ profile, email, companyName }: SettingsClientPr
 
   function saveProfile() {
     startTransition(async () => {
-      const res = await updateOwnProfile(fullName, photoUrl);
+      const res = await updateOwnProfile(fullName, photoUrl, gender);
       if (res.ok) {
         toast.success("Perfil atualizado.");
       } else {
@@ -106,7 +101,19 @@ export function SettingsClient({ profile, email, companyName }: SettingsClientPr
               </div>
               <div className="space-y-1.5">
                 <Label>Perfil de acesso</Label>
-                <Input value={ROLE_LABELS[profile.role] ?? profile.role} disabled />
+                <Input value={roleLabel(profile.role, gender)} disabled />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Gênero</Label>
+                <Select value={gender ?? ""} onValueChange={(v) => setGender(v as Gender)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Não informado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">{GENDER_LABELS.male}</SelectItem>
+                    <SelectItem value="female">{GENDER_LABELS.female}</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {companyName && (

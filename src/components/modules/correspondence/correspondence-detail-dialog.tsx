@@ -121,7 +121,7 @@ export function CorrespondenceDetailDialog({
               <p>{formatDateTime(correspondence.received_at)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Porteiro (recebimento)</p>
+              <p className="text-xs text-muted-foreground">Controlador(a) (recebimento)</p>
               <p>{correspondence.entry_porter_name ?? "—"}</p>
             </div>
             {correspondence.location_note && (

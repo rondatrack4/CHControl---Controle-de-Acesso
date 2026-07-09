@@ -96,7 +96,7 @@ export function LoginForm() {
 
           <div className="rounded-lg border bg-muted/40 p-4 text-xs text-muted-foreground">
             <p className="mb-1 font-medium text-foreground">Ambiente de demonstração</p>
-            <p>Porteiro: portaria@chcontrol.dev</p>
+            <p>Controlador(a) de Acesso: portaria@chcontrol.dev</p>
             <p>Superadmin: superadmin@chcontrol.dev</p>
             <p>Senha: chcontrol123</p>
           </div>

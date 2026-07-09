@@ -60,7 +60,7 @@ export function CompaniesClient({ companies }: { companies: CompanyRow[] }) {
     },
     {
       key: "porters",
-      header: "Porteiros",
+      header: "Controladores(as)",
       render: (c) => <Badge variant="secondary">{c.porters}</Badge>,
     },
     {

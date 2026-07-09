@@ -14,6 +14,7 @@ export default async function AppLayout({
       userEmail={session.email}
       companyName={session.company?.name ?? null}
       role={session.profile.role}
+      gender={session.profile.gender}
       photoUrl={session.profile.photo_url}
     >
       {children}

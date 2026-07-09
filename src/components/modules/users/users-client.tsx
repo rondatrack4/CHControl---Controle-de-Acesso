@@ -28,7 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import type { Profile } from "@/lib/database.types";
 
-const ROLE_LABELS: Record<string, string> = { admin: "Administrador", porter: "Porteiro" };
+const ROLE_LABELS: Record<string, string> = { admin: "Administrador", porter: "Controlador(a) de Acesso" };
 
 export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; currentUserId: string }) {
   const [open, setOpen] = useState(false);
@@ -64,7 +64,7 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
 
   return (
     <>
-      <PageHeader title="Usuários" description="Logins de administradores e porteiros deste condomínio.">
+      <PageHeader title="Usuários" description="Logins de administradores e controladores(as) de acesso deste condomínio.">
         <Button onClick={() => setOpen(true)}>
           <UserPlus className="h-4 w-4" /> Novo usuário
         </Button>
@@ -144,7 +144,7 @@ export function UsersClient({ profiles, currentUserId }: { profiles: Profile[]; 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="porter">Porteiro</SelectItem>
+                  <SelectItem value="porter">Controlador(a) de Acesso</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>

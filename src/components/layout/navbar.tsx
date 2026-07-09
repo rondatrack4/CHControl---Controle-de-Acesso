@@ -14,7 +14,9 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { initials } from "@/lib/utils";
+import { roleLabel } from "@/lib/constants";
 import { signOutAction } from "@/app/(app)/actions";
+import type { Gender } from "@/lib/database.types";
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -22,6 +24,7 @@ interface NavbarProps {
   userEmail: string;
   companyName: string | null;
   role: string;
+  gender?: Gender | null;
   photoUrl?: string | null;
 }
 
@@ -31,6 +34,7 @@ export function Navbar({
   userEmail,
   companyName,
   role,
+  gender,
   photoUrl,
 }: NavbarProps) {
   const { theme, setTheme } = useTheme();
@@ -71,7 +75,7 @@ export function Navbar({
               </Avatar>
               <div className="hidden text-left sm:block">
                 <p className="text-sm font-medium leading-none">{userName}</p>
-                <p className="text-xs text-muted-foreground">{roleLabel(role)}</p>
+                <p className="text-xs text-muted-foreground">{roleLabel(role, gender)}</p>
               </div>
             </Button>
           </DropdownMenuTrigger>
@@ -84,7 +88,7 @@ export function Navbar({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled>
-              <User /> {roleLabel(role)}
+              <User /> {roleLabel(role, gender)}
             </DropdownMenuItem>
             {role !== "resident" && (
               <DropdownMenuItem asChild>
@@ -110,12 +114,3 @@ export function Navbar({
   );
 }
 
-function roleLabel(role: string): string {
-  const map: Record<string, string> = {
-    superadmin: "Superadministrador",
-    admin: "Administrador",
-    porter: "Porteiro",
-    resident: "Morador",
-  };
-  return map[role] ?? role;
-}

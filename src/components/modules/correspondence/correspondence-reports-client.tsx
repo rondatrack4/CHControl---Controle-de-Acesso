@@ -131,7 +131,7 @@ export function CorrespondenceReportsClient({ correspondences }: { correspondenc
           { label: "Mais recebidas — Transportadora", data: stats.byCarrier },
           { label: "Mais recebidas — Morador", data: stats.byResident },
           { label: "Mais recebidas — Residência", data: stats.byBlock },
-          { label: "Mais recebidas — Porteiro", data: stats.byPorter },
+          { label: "Mais recebidas — Controlador(a)", data: stats.byPorter },
         ].map((s) => (
           <Card key={s.label}>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{s.label}</CardTitle></CardHeader>

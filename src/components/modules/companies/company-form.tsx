@@ -62,7 +62,7 @@ export function CompanyForm({ open, onOpenChange, company }: CompanyFormProps) {
           })
         : await createCompanyWithPorter(form);
       if (res.ok) {
-        toast.success(editing ? "Empresa atualizada." : "Empresa e porteiro criados.");
+        toast.success(editing ? "Empresa atualizada." : "Empresa e controlador(a) de acesso criados.");
         onOpenChange(false);
       } else {
         toast.error(res.error ?? "Erro ao salvar.");
@@ -123,7 +123,7 @@ export function CompanyForm({ open, onOpenChange, company }: CompanyFormProps) {
             <div className="rounded-lg border bg-muted/30 p-4">
               <p className="mb-3 text-sm font-semibold">Primeiro usuário da portaria</p>
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Nome do porteiro *">
+                <Field label="Nome do(a) controlador(a) de acesso *">
                   <Input value={form.porter_name} onChange={(e) => set("porter_name", e.target.value)} />
                 </Field>
                 <Field label="E-mail de acesso *">

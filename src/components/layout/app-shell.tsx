@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "./sidebar";
 import { Navbar } from "./navbar";
 import { cn } from "@/lib/utils";
-import type { UserRole } from "@/lib/database.types";
+import type { UserRole, Gender } from "@/lib/database.types";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -12,6 +12,7 @@ interface AppShellProps {
   userEmail: string;
   companyName: string | null;
   role: UserRole;
+  gender?: Gender | null;
   navSet?: "default" | "resident";
   photoUrl?: string | null;
 }
@@ -22,6 +23,7 @@ export function AppShell({
   userEmail,
   companyName,
   role,
+  gender,
   navSet,
   photoUrl,
 }: AppShellProps) {
@@ -62,6 +64,7 @@ export function AppShell({
           userEmail={userEmail}
           companyName={companyName}
           role={role}
+          gender={gender}
           photoUrl={photoUrl}
         />
         <main className={cn("flex-1 overflow-y-auto p-4 md:p-6")}>{children}</main>

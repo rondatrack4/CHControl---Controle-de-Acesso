@@ -228,7 +228,7 @@ export function CorrespondenceClient({ correspondences, residents, porters }: Co
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Porteiro</Label>
+              <Label>Controlador(a) de Acesso</Label>
               <Select value={filters.porter} onValueChange={(v) => set("porter", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>

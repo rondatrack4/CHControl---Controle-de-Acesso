@@ -116,6 +116,29 @@ export const STATUS_LABELS: Record<string, string> = {
   inactive: "Inativo",
 };
 
+export const GENDER_LABELS: Record<string, string> = {
+  male: "Masculino",
+  female: "Feminino",
+};
+
+/** Rótulo do papel de acesso, flexionado conforme o gênero quando disponível. */
+export function porterLabel(gender?: string | null): string {
+  if (gender === "male") return "Controlador de Acesso";
+  if (gender === "female") return "Controladora de Acesso";
+  return "Controlador(a) de Acesso";
+}
+
+/** Rótulo de qualquer papel do sistema (usa gênero para o papel de controlador). */
+export function roleLabel(role: string, gender?: string | null): string {
+  const map: Record<string, string> = {
+    superadmin: "Superadministrador",
+    admin: "Administrador",
+    resident: "Morador",
+  };
+  if (role === "porter") return porterLabel(gender);
+  return map[role] ?? role;
+}
+
 export const PAGE_SIZE = 10;
 
 // --- Correspondências ---

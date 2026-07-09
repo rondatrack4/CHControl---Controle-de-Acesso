@@ -10,6 +10,7 @@ export type ResidenceType = "lote" | "apartamento";
 export type RecordStatus = "active" | "inactive";
 export type CpfCnpjKind = "cpf" | "cnpj";
 export type PhoneKind = "fixo" | "whatsapp";
+export type Gender = "male" | "female";
 
 export interface ResidenceEntry {
   residence_type: ResidenceType;
@@ -72,6 +73,7 @@ export interface Profile {
   status: UserStatus;
   resident_id: string | null;
   photo_url: string | null;
+  gender: Gender | null;
   created_at: string;
   updated_at: string;
 }

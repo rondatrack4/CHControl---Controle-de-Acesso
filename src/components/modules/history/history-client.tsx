@@ -189,7 +189,7 @@ export function HistoryClient({ logs, porters }: { logs: AccessLogWithDestinatio
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Porteiro</Label>
+              <Label>Controlador(a) de Acesso</Label>
               <Select value={filters.porter} onValueChange={(v) => set("porter", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -221,7 +221,7 @@ export function HistoryClient({ logs, porters }: { logs: AccessLogWithDestinatio
               <TableHead>Responsável / Residência</TableHead>
               <TableHead>Entrada</TableHead>
               <TableHead>Saída</TableHead>
-              <TableHead>Porteiro</TableHead>
+              <TableHead>Controlador(a)</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="no-print"></TableHead>
             </TableRow>
