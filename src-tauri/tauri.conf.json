@@ -20,6 +20,8 @@
     "targets": ["nsis", "msi"],
     "resources": {
       "resources/server": "server",
+      "resources/server/server.js": "server",
+      "resources/server/package.json": "server",
       "resources/node": "node"
     },
     "icon": [

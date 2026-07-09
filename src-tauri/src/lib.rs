@@ -2,8 +2,9 @@ use std::net::TcpStream;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::menu::{MenuBuilder, SubmenuBuilder};
+use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 /// Porta local onde o sidecar Node (Next.js standalone) escuta.
 const SIDECAR_PORT: u16 = 34115;
@@ -26,33 +27,95 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
 pub fn run() {
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(None)))
+        .plugin(tauri_plugin_dialog::init())
         .menu(|handle| {
             // Barra de menus nativa exibida na barra de título (Windows).
             let arquivo = SubmenuBuilder::new(handle, "Arquivo")
-                .text("reload", "Recarregar")
+                .item(&MenuItemBuilder::new("Recarregar").id("reload").accelerator("CmdOrCtrl+R").build(handle)?)
+                .item(&MenuItemBuilder::new("Imprimir").id("print").accelerator("CmdOrCtrl+P").build(handle)?)
                 .separator()
-                .text("quit", "Sair")
+                .item(&PredefinedMenuItem::quit(handle, Some("Sair"))?)
+                .build()?;
+            let editar = SubmenuBuilder::new(handle, "Editar")
+                .item(&PredefinedMenuItem::undo(handle, Some("Desfazer"))?)
+                .item(&PredefinedMenuItem::redo(handle, Some("Refazer"))?)
+                .separator()
+                .item(&PredefinedMenuItem::cut(handle, Some("Recortar"))?)
+                .item(&PredefinedMenuItem::copy(handle, Some("Copiar"))?)
+                .item(&PredefinedMenuItem::paste(handle, Some("Colar"))?)
+                .item(&PredefinedMenuItem::select_all(handle, Some("Selecionar tudo"))?)
+                .build()?;
+            let exibir = SubmenuBuilder::new(handle, "Exibir")
+                .item(&MenuItemBuilder::new("Recarregar").id("reload2").accelerator("F5").build(handle)?)
+                .separator()
+                .item(&MenuItemBuilder::new("Aumentar zoom").id("zoom_in").accelerator("CmdOrCtrl+Plus").build(handle)?)
+                .item(&MenuItemBuilder::new("Diminuir zoom").id("zoom_out").accelerator("CmdOrCtrl+-").build(handle)?)
+                .item(&MenuItemBuilder::new("Restaurar zoom").id("zoom_reset").accelerator("CmdOrCtrl+0").build(handle)?)
+                .separator()
+                .item(&MenuItemBuilder::new("Tela cheia").id("fullscreen").accelerator("F11").build(handle)?)
                 .build()?;
             let ajuda = SubmenuBuilder::new(handle, "Ajuda")
-                .text("about", "Sobre o CHControl")
+                .item(&MenuItemBuilder::new("Verificar atualizações").id("check_updates").build(handle)?)
+                .separator()
+                .item(&MenuItemBuilder::new("Sobre o CHControl").id("about").build(handle)?)
                 .build()?;
-            MenuBuilder::new(handle).item(&arquivo).item(&ajuda).build()
+            MenuBuilder::new(handle)
+                .item(&arquivo)
+                .item(&editar)
+                .item(&exibir)
+                .item(&ajuda)
+                .build()
         })
-        .on_menu_event(|app, event| match event.id().as_ref() {
-            "reload" => {
-                if let Some(w) = app.get_webview_window("main") {
-                    let _ = w.eval("window.location.reload()");
+        .on_menu_event(|app, event| {
+            let win = app.get_webview_window("main");
+            match event.id().as_ref() {
+                "reload" | "reload2" => {
+                    if let Some(w) = win {
+                        let _ = w.eval("window.location.reload()");
+                    }
                 }
-            }
-            "quit" => app.exit(0),
-            "about" => {
-                if let Some(w) = app.get_webview_window("main") {
-                    let _ = w.eval(
-                        "window.alert('CHControl — Sistema de Controle de Acesso\\nVersão 1.0');",
-                    );
+                "print" => {
+                    if let Some(w) = win {
+                        let _ = w.eval("window.print()");
+                    }
                 }
+                "zoom_in" => {
+                    if let Some(w) = win {
+                        let _ = w.eval("var b=document.body,z=parseFloat(b.style.zoom||'1');b.style.zoom=(z+0.1).toFixed(2);");
+                    }
+                }
+                "zoom_out" => {
+                    if let Some(w) = win {
+                        let _ = w.eval("var b=document.body,z=parseFloat(b.style.zoom||'1');b.style.zoom=Math.max(0.5,z-0.1).toFixed(2);");
+                    }
+                }
+                "zoom_reset" => {
+                    if let Some(w) = win {
+                        let _ = w.eval("document.body.style.zoom='1';");
+                    }
+                }
+                "fullscreen" => {
+                    if let Some(w) = win {
+                        let f = w.is_fullscreen().unwrap_or(false);
+                        let _ = w.set_fullscreen(!f);
+                    }
+                }
+                "check_updates" => {
+                    app.dialog()
+                        .message("Você está usando a versão mais recente (v1.0).")
+                        .title("Verificar atualizações")
+                        .kind(MessageDialogKind::Info)
+                        .show(|_| {});
+                }
+                "about" => {
+                    app.dialog()
+                        .message("CHControl — Sistema de Controle de Acesso\nVersão 1.0\n\nControle de moradores, visitantes, prestadores, correspondências e acessos — 100% offline.")
+                        .title("Sobre o CHControl")
+                        .kind(MessageDialogKind::Info)
+                        .show(|_| {});
+                }
+                _ => {}
             }
-            _ => {}
         })
         .setup(|app| {
             if cfg!(debug_assertions) {
