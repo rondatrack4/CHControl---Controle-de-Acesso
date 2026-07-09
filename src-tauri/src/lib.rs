@@ -144,7 +144,9 @@ pub fn run() {
                 } else {
                     "node".into()
                 });
-                cmd.arg(&server_js)
+                // Passa "server.js" relativo (cwd já é a pasta do server). Caminho
+                // absoluto estava chegando corrompido ao node ("EISDIR: lstat 'C:'").
+                cmd.arg("server.js")
                     .env("APP_MODE", "desktop")
                     .env("NEXT_PUBLIC_APP_MODE", "desktop")
                     .env("APP_DATA_DIR", &data_dir)
