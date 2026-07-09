@@ -1,11 +1,11 @@
 "use client";
 
+import { X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -27,18 +27,30 @@ export function LogDetailDialog({ open, onOpenChange, log }: LogDetailDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{log.person_name}</DialogTitle>
-          <DialogDescription>
-            <span className="mr-1.5 inline-flex items-center gap-1.5">
-              <Badge variant="outline">
-                {log.person_category ? VISITOR_CATEGORY_LABELS[log.person_category] ?? log.person_category : PERSON_TYPE_LABELS[log.person_type]}
-              </Badge>
-              <StatusBadge status={log.status} />
-              {log.priority === "urgente" && <Badge variant="destructive">Urgente</Badge>}
-            </span>
-          </DialogDescription>
+      <DialogContent className="max-w-2xl" hideClose>
+        <DialogHeader className="space-y-0">
+          <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 px-6 pb-6 pt-7">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-sky-300/10 blur-3xl" />
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/30 bg-white/10 text-white/80 backdrop-blur-sm transition-all hover:bg-white/25 hover:text-white"
+              aria-label="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="relative">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <Badge className="border-0 bg-white/20 text-white hover:bg-white/30">
+                  {log.person_category ? VISITOR_CATEGORY_LABELS[log.person_category] ?? log.person_category : PERSON_TYPE_LABELS[log.person_type]}
+                </Badge>
+                <StatusBadge status={log.status} />
+                {log.priority === "urgente" && <Badge variant="destructive">Urgente</Badge>}
+              </div>
+              <DialogTitle className="truncate text-2xl font-bold text-white">{log.person_name}</DialogTitle>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1">

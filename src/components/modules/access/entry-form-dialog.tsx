@@ -589,18 +589,30 @@ export function EntryFormDialog({ open, onOpenChange, residents, units = [], ins
             </div>
           </div>
 
-          {/* Notas */}
-          <div className="space-y-2">
+          {/* Detalhes da visita */}
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
-              <Label className="font-semibold">Notas adicionais</Label>
+              <h3 className="font-semibold">Detalhes da visita</h3>
             </div>
-            <Input
-              value={form.notes}
-              onChange={(e) => set("notes", e.target.value)}
-              placeholder="Observações importantes sobre a visita..."
-              className="h-10"
-            />
+            <div className="space-y-1.5">
+              <Label>Motivo da visita</Label>
+              <Input
+                value={form.reason}
+                onChange={(e) => set("reason", e.target.value)}
+                placeholder="Ex.: Visita social, entrega, manutenção..."
+                className="h-10"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Observações</Label>
+              <Input
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="Observações importantes sobre a visita..."
+                className="h-10"
+              />
+            </div>
           </div>
 
           <DialogFooter className="gap-3">

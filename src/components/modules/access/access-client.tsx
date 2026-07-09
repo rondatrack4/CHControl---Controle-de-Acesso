@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { PageHeader } from "@/components/shared/page-header";
-import { PersonDetailDialog, type PersonDetail } from "@/components/modules/access/person-detail-dialog";
+import { PersonDetailDialog, type PersonDetail, type VisitInfo } from "@/components/modules/access/person-detail-dialog";
 import { EntryFormDialog } from "@/components/modules/access/entry-form-dialog";
 import { ExitFormDialog } from "@/components/modules/access/exit-form-dialog";
 import { formatDateTime, formatElapsed, initials, residenceLabel } from "@/lib/utils";
@@ -34,6 +34,7 @@ export function AccessClient({ visitors, providers, inside, residents, units = [
   const [exitLog, setExitLog] = useState<AccessLogWithDestinations | null>(null);
   const [detailPerson, setDetailPerson] = useState<PersonDetail | null>(null);
   const [detailTimeline, setDetailTimeline] = useState<{ entryAt: string; exitAt: string | null; destinations: AccessLogWithDestinations["destinations"] } | null>(null);
+  const [detailVisit, setDetailVisit] = useState<VisitInfo | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const router = useRouter();
@@ -124,6 +125,14 @@ export function AccessClient({ visitors, providers, inside, residents, units = [
     };
     setDetailPerson(person);
     setDetailTimeline({ entryAt: log.entry_at, exitAt: log.exit_at, destinations: log.destinations });
+    setDetailVisit({
+      reason: log.reason,
+      notes: log.notes,
+      serviceDescription: log.service_description,
+      expectedExitAt: log.expected_exit_at,
+      priority: log.priority,
+      entryPorterName: log.entry_porter_name,
+    });
     setDetailOpen(true);
   }
 
@@ -227,6 +236,7 @@ export function AccessClient({ visitors, providers, inside, residents, units = [
         onOpenChange={setDetailOpen}
         person={detailPerson}
         timeline={detailTimeline ?? undefined}
+        visit={detailVisit ?? undefined}
       />
     </>
   );
