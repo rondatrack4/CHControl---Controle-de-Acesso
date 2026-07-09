@@ -31,3 +31,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 src-tauri/resources/
+
+# Tauri updater signing key (NUNCA versionar a chave privada)
+src-tauri/.tauri-updater.key
+src-tauri/.tauri-updater.key.pub

@@ -15,9 +15,27 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU2NjNDNjRFMkUxQkIxNkUKUldSdXNSc3VUc1pqVnZiZkdMcmdOTnlTN1F0U2J4cDFJQWFPSytoZnZWT3FacHJFNXkyamlLTTgK",
+      "endpoints": [
+        "https://github.com/rondatrack4/CHControl---Controle-de-Acesso/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
+    "createUpdaterArtifacts": true,
+    "publisher": "CHControl",
+    "homepage": "https://github.com/rondatrack4/CHControl---Controle-de-Acesso",
+    "copyright": "© 2026 CHControl. Todos os direitos reservados.",
+    "category": "Business",
+    "shortDescription": "Sistema de Controle de Acesso para Condomínios",
+    "longDescription": "CHControl — Portaria digital 100% offline: controle de moradores, visitantes, prestadores, funcionários, correspondências, chaves e acessos, com histórico e auditoria completos.",
     "resources": {
       "resources/server": "server",
       "resources/node": "node"
@@ -29,6 +47,16 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "windows": {
+      "nsis": {
+        "languages": ["PortugueseBR"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico"
+      },
+      "wix": {
+        "language": "pt-BR"
+      }
+    },
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }

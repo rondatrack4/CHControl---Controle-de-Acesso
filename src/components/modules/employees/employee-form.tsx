@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Loader2, Home, Ban, ShieldCheck, X, UserRound, Car, IdCard } from "lucide-react";
+import { Loader2, Ban, ShieldCheck, X, UserRound, Car, IdCard, Phone, MapPin, Briefcase } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,37 +26,31 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PhotoAvatar } from "@/components/shared/photo-crop";
 import { DocumentUpload } from "@/components/shared/document-upload";
-import { ResidentCombobox } from "@/components/shared/resident-combobox";
-import { maskCNPJ, maskCPF, residenceLabel } from "@/lib/utils";
-import { maskRG, formatPlateMercosul, formatPlateOld } from "@/lib/masks";
+import { maskCNPJ, maskCPF } from "@/lib/utils";
+import { maskRG, formatPlateMercosul, formatPlateOld, maskPhone, maskCEP } from "@/lib/masks";
 import { useEnterSubmit } from "@/lib/form-utils";
 import { MARITAL_STATUS_LABELS } from "@/lib/constants";
-import { createVisitor, updateVisitor } from "@/app/(app)/visitantes/actions";
-import type { KnownPersonResult } from "@/app/(app)/acessos/actions";
-import type { Visitor, Resident, DocumentType, CpfCnpjKind, MaritalStatus } from "@/lib/database.types";
+import { createEmployee, updateEmployee } from "@/app/(app)/funcionarios/actions";
+import type { Employee, DocumentType, CpfCnpjKind, MaritalStatus } from "@/lib/database.types";
 
-interface VisitorFormProps {
+interface EmployeeFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  visitor?: Visitor | null;
-  residents: Resident[];
-  /** Chamado após um cadastro bem-sucedido (apenas na criação), com os dados já no formato de busca de acesso. */
-  onCreated?: (person: KnownPersonResult) => void;
+  employee?: Employee | null;
 }
 
-export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated }: VisitorFormProps) {
-  const editing = !!visitor;
+export function EmployeeForm({ open, onOpenChange, employee }: EmployeeFormProps) {
+  const editing = !!employee;
   const [pending, startTransition] = useTransition();
-  const [form, setForm] = useState(() => initial(visitor));
-  const [lastId, setLastId] = useState<string | null>(visitor?.id ?? null);
+  const [form, setForm] = useState(() => initial(employee));
+  const [lastId, setLastId] = useState<string | null>(employee?.id ?? null);
   const [confirmBlockOpen, setConfirmBlockOpen] = useState(false);
   const [plateType, setPlateType] = useState<"mercosul" | "antiga">("mercosul");
-  if (open && (visitor?.id ?? null) !== lastId) {
-    setForm(initial(visitor));
-    setLastId(visitor?.id ?? null);
+  if (open && (employee?.id ?? null) !== lastId) {
+    setForm(initial(employee));
+    setLastId(employee?.id ?? null);
   }
 
-  const selectedResident = residents.find((r) => r.id === form.resident_id) ?? null;
   const isBlocked = form.status === "inactive";
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -73,37 +67,9 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
   function submit() {
     startTransition(async () => {
       const payload = { ...form, marital_status: (form.marital_status || null) as MaritalStatus | null };
-      const res = editing
-        ? await updateVisitor(visitor!.id, payload)
-        : await createVisitor(payload);
+      const res = editing ? await updateEmployee(employee!.id, payload) : await createEmployee(payload);
       if (res.ok) {
-        toast.success(editing ? "Visitante atualizado." : "Visitante cadastrado.");
-        if (!editing && res.id) {
-          const resident = residents.find((r) => r.id === form.resident_id);
-          onCreated?.({
-            id: res.id,
-            person_type: "visitor",
-            full_name: form.full_name,
-            cpf: form.cpf || null,
-            cpf_type: form.cpf_type,
-            document_type: form.document_type,
-            document_number: form.document_number || null,
-            phone: form.phone || null,
-            photo_url: form.photo_url,
-            company_name: null,
-            service_type: null,
-            vehicle_type: form.vehicle_type || "automovel",
-            vehicle_plate: form.vehicle_plate || null,
-            vehicle_brand: form.vehicle_brand || null,
-            vehicle_model: form.vehicle_model || null,
-            vehicle_color: form.vehicle_color || null,
-            category: form.category,
-            residentName: resident?.full_name ?? null,
-            residenceLabel: resident ? residenceLabel(resident) : null,
-            last_visit_at: null,
-            last_destination_label: null,
-          });
-        }
+        toast.success(editing ? "Funcionário atualizado." : "Funcionário cadastrado.");
         onOpenChange(false);
       } else {
         toast.error(res.error ?? "Erro ao salvar.");
@@ -112,12 +78,12 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
   }
 
   function setBlocked(blocked: boolean) {
-    if (!visitor) return;
+    if (!employee) return;
     const status = blocked ? "inactive" : "active";
     startTransition(async () => {
-      const res = await updateVisitor(visitor.id, { ...form, marital_status: (form.marital_status || null) as MaritalStatus | null, status });
+      const res = await updateEmployee(employee.id, { ...form, marital_status: (form.marital_status || null) as MaritalStatus | null, status });
       if (res.ok) {
-        toast.success(blocked ? "Visitante bloqueado." : "Visitante desbloqueado.");
+        toast.success(blocked ? "Funcionário bloqueado." : "Funcionário desbloqueado.");
         set("status", status);
         setConfirmBlockOpen(false);
         onOpenChange(false);
@@ -130,13 +96,12 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-w-2xl"
+        className="max-w-3xl"
         hideClose
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <DialogHeader className="space-y-0">
-          {/* Banner com gradiente */}
           <div className="relative -mx-6 -mt-6 overflow-hidden rounded-t-lg bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 px-6 pb-6 pt-7">
             <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-400/20 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-20 -left-10 h-48 w-48 rounded-full bg-sky-300/10 blur-3xl" />
@@ -158,9 +123,9 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
                 variant="banner"
               />
               <div className="min-w-0 flex-1">
-                <Badge className="mb-2 border-0 bg-white/20 text-white hover:bg-white/30">Visitante</Badge>
+                <Badge className="mb-2 border-0 bg-white/20 text-white hover:bg-white/30">Funcionário</Badge>
                 <DialogTitle className="truncate text-2xl font-bold text-white">
-                  {editing ? form.full_name || "Editar visitante" : "Novo visitante"}
+                  {editing ? form.full_name || "Editar funcionário" : "Novo funcionário"}
                 </DialogTitle>
                 {editing && (
                   <div className="mt-2">
@@ -173,39 +138,17 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
         </DialogHeader>
 
         <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onKeyDown={useEnterSubmit(submit)}>
-          {/* Morador vinculado */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Home className="h-4 w-4 text-muted-foreground" />
-              <Label className="font-semibold">Morador responsável *</Label>
-            </div>
-            <ResidentCombobox
-              residents={residents}
-              value={form.resident_id || null}
-              onSelect={(r) => set("resident_id", r?.id ?? "")}
-            />
-            {selectedResident && (
-              <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-muted px-3 py-1.5 text-sm">
-                <Home className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  Residência: <strong>{residenceLabel(selectedResident)}</strong>
-                </span>
-              </div>
-            )}
-          </div>
-
           {/* Dados pessoais */}
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Dados Pessoais</h3>
-            </div>
+          <Section icon={UserRound} title="Dados Pessoais">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Nome completo *">
                 <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
               </Field>
-              <Field label="Empresa">
-                <Input value={form.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} placeholder="Empresa (opcional)" />
+              <Field label="Empresa / Terceirizada">
+                <Input value={form.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} placeholder="Ex.: Zeladoria própria" />
+              </Field>
+              <Field label="Cargo / Função">
+                <Input value={form.role_title ?? ""} onChange={(e) => set("role_title", e.target.value)} placeholder="Ex.: Zelador, Faxineira" />
               </Field>
               <Field label="Estado civil">
                 <Select value={form.marital_status || ""} onValueChange={(v) => set("marital_status", v)}>
@@ -223,10 +166,7 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
                 <div className="flex gap-2">
                   <Select
                     value={form.cpf_type}
-                    onValueChange={(v) => {
-                      set("cpf_type", v as CpfCnpjKind);
-                      set("cpf", "");
-                    }}
+                    onValueChange={(v) => { set("cpf_type", v as CpfCnpjKind); set("cpf", ""); }}
                   >
                     <SelectTrigger className="w-[110px] shrink-0">
                       <SelectValue />
@@ -238,55 +178,83 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
                   </Select>
                   <Input
                     value={form.cpf ?? ""}
-                    onChange={(e) =>
-                      set("cpf", form.cpf_type === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))
-                    }
+                    onChange={(e) => set("cpf", form.cpf_type === "cnpj" ? maskCNPJ(e.target.value) : maskCPF(e.target.value))}
                     placeholder={form.cpf_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"}
                   />
                 </div>
               </Field>
-              <Field label="Tipo de documento">
-                <Select value={form.document_type} onValueChange={(v) => set("document_type", v as DocumentType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="rg">RG</SelectItem>
-                    <SelectItem value="cnh">CNH</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Número do documento">
-                <Input
-                  value={form.document_number ?? ""}
-                  onChange={(e) => set("document_number", maskRG(e.target.value))}
-                />
-              </Field>
-              <Field label="Telefone">
-                <Input value={form.phone ?? ""} onChange={(e) => set("phone", e.target.value)} />
+              <Field label="Documento (RG / CNH)">
+                <div className="flex gap-2">
+                  <Select value={form.document_type} onValueChange={(v) => set("document_type", v as DocumentType)}>
+                    <SelectTrigger className="w-[100px] shrink-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rg">RG</SelectItem>
+                      <SelectItem value="cnh">CNH</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input value={form.document_number ?? ""} onChange={(e) => set("document_number", maskRG(e.target.value))} placeholder="Número" />
+                </div>
               </Field>
             </div>
-          </div>
+          </Section>
+
+          {/* Contato */}
+          <Section icon={Phone} title="Contato">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Telefone">
+                <Input value={form.phone ?? ""} onChange={(e) => set("phone", maskPhone(e.target.value))} placeholder="(00) 0000-0000" />
+              </Field>
+              <Field label="Celular">
+                <Input value={form.mobile ?? ""} onChange={(e) => set("mobile", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
+              </Field>
+              <Field label="WhatsApp">
+                <Input value={form.whatsapp ?? ""} onChange={(e) => set("whatsapp", maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
+              </Field>
+              <Field label="E-mail">
+                <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} placeholder="funcionario@email.com" />
+              </Field>
+            </div>
+          </Section>
+
+          {/* Endereço */}
+          <Section icon={MapPin} title="Endereço">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="CEP">
+                <Input value={form.cep ?? ""} onChange={(e) => set("cep", maskCEP(e.target.value))} placeholder="00000-000" />
+              </Field>
+              <div className="lg:col-span-2">
+                <Field label="Rua">
+                  <Input value={form.street ?? ""} onChange={(e) => set("street", e.target.value)} />
+                </Field>
+              </div>
+              <Field label="Número">
+                <Input value={form.number ?? ""} onChange={(e) => set("number", e.target.value)} />
+              </Field>
+              <Field label="Complemento">
+                <Input value={form.complement ?? ""} onChange={(e) => set("complement", e.target.value)} />
+              </Field>
+              <Field label="Bairro">
+                <Input value={form.neighborhood ?? ""} onChange={(e) => set("neighborhood", e.target.value)} />
+              </Field>
+              <Field label="Cidade">
+                <Input value={form.city ?? ""} onChange={(e) => set("city", e.target.value)} />
+              </Field>
+            </div>
+          </Section>
 
           {/* Documentos */}
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2">
-              <IdCard className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Documentos</h3>
-            </div>
+          <Section icon={IdCard} title="Documentos">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <DocumentUpload label="Documento (RG/CNH)" value={form.document_photo_url} onChange={(url) => set("document_photo_url", url)} folder="visitor-documents" framed />
-              <DocumentUpload label="Antecedentes Criminais" value={form.document_criminal_url} onChange={(url) => set("document_criminal_url", url)} folder="visitor-documents" framed />
-              <DocumentUpload label="Comprovante de Endereço" value={form.document_address_url} onChange={(url) => set("document_address_url", url)} folder="visitor-documents" framed />
+              <DocumentUpload label="Documento (RG/CNH)" value={form.document_photo_url} onChange={(url) => set("document_photo_url", url)} folder="employee-documents" framed />
+              <DocumentUpload label="Antecedentes Criminais" value={form.document_criminal_url} onChange={(url) => set("document_criminal_url", url)} folder="employee-documents" framed />
+              <DocumentUpload label="Comprovante de Endereço" value={form.document_address_url} onChange={(url) => set("document_address_url", url)} folder="employee-documents" framed />
             </div>
-          </div>
+          </Section>
 
           {/* Veículo */}
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2">
-              <Car className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Veículo</h3>
-            </div>
+          <Section icon={Car} title="Veículo">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Tipo">
                 <Select value={form.vehicle_type || "automovel"} onValueChange={(v) => set("vehicle_type", v)}>
@@ -316,9 +284,7 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
               <Field label="Placa">
                 <Input
                   value={form.vehicle_plate ?? ""}
-                  onChange={(e) =>
-                    set("vehicle_plate", plateType === "mercosul" ? formatPlateMercosul(e.target.value) : formatPlateOld(e.target.value))
-                  }
+                  onChange={(e) => set("vehicle_plate", plateType === "mercosul" ? formatPlateMercosul(e.target.value) : formatPlateOld(e.target.value))}
                   placeholder={plateType === "mercosul" ? "ABC1D23" : "BUY-8593"}
                   maxLength={plateType === "mercosul" ? 7 : 8}
                   className="font-mono uppercase"
@@ -334,16 +300,12 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
                 <Input value={form.vehicle_color ?? ""} onChange={(e) => set("vehicle_color", e.target.value)} placeholder="Prata" />
               </Field>
             </div>
-          </div>
+          </Section>
 
           {/* Observações */}
-          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Observações</h3>
-            </div>
-            <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} rows={3} placeholder="Anotações internas sobre o visitante..." />
-          </div>
+          <Section icon={Briefcase} title="Observações">
+            <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Anotações internas sobre o funcionário..." rows={3} />
+          </Section>
         </div>
 
         <DialogFooter className="mt-2 gap-2">
@@ -371,14 +333,26 @@ export function VisitorForm({ open, onOpenChange, visitor, residents, onCreated 
       <ConfirmDialog
         open={confirmBlockOpen}
         onOpenChange={setConfirmBlockOpen}
-        title="Bloquear visitante"
-        description={`Tem certeza que deseja bloquear "${form.full_name}"? Ele deixará de aparecer no controle de acesso e não poderá mais registrar entrada.`}
+        title="Bloquear funcionário"
+        description={`Tem certeza que deseja bloquear "${form.full_name}"?`}
         variant="destructive"
         confirmLabel="Bloquear"
         loading={pending}
         onConfirm={() => setBlocked(true)}
       />
     </Dialog>
+  );
+}
+
+function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold">{title}</h3>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -391,28 +365,36 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function initial(v?: Visitor | null) {
+function initial(e?: Employee | null) {
   return {
-    full_name: v?.full_name ?? "",
-    company_name: v?.company_name ?? "",
-    marital_status: v?.marital_status ?? "",
-    cpf: v?.cpf ?? "",
-    cpf_type: (v?.cpf_type ?? "cpf") as CpfCnpjKind,
-    document_type: (v?.document_type ?? "rg") as DocumentType,
-    document_number: v?.document_number ?? "",
-    phone: v?.phone ?? "",
-    photo_url: v?.photo_url ?? null,
-    resident_id: v?.resident_id ?? "",
-    category: v?.category ?? "visitante",
-    vehicle_type: v?.vehicle_type ?? "automovel",
-    vehicle_plate: v?.vehicle_plate ?? "",
-    vehicle_brand: v?.vehicle_brand ?? "",
-    vehicle_model: v?.vehicle_model ?? "",
-    vehicle_color: v?.vehicle_color ?? "",
-    document_photo_url: v?.document_photo_url ?? null,
-    document_criminal_url: v?.document_criminal_url ?? null,
-    document_address_url: v?.document_address_url ?? null,
-    notes: v?.notes ?? "",
-    status: (v?.status ?? "active") as "active" | "inactive",
+    full_name: e?.full_name ?? "",
+    company_name: e?.company_name ?? "",
+    role_title: e?.role_title ?? "",
+    marital_status: e?.marital_status ?? "",
+    cpf: e?.cpf ?? "",
+    cpf_type: (e?.cpf_type ?? "cpf") as CpfCnpjKind,
+    document_type: (e?.document_type ?? "rg") as DocumentType,
+    document_number: e?.document_number ?? "",
+    document_photo_url: e?.document_photo_url ?? null,
+    document_criminal_url: e?.document_criminal_url ?? null,
+    document_address_url: e?.document_address_url ?? null,
+    photo_url: e?.photo_url ?? null,
+    phone: e?.phone ?? "",
+    mobile: e?.mobile ?? "",
+    whatsapp: e?.whatsapp ?? "",
+    email: e?.email ?? "",
+    cep: e?.cep ?? "",
+    street: e?.street ?? "",
+    number: e?.number ?? "",
+    complement: e?.complement ?? "",
+    neighborhood: e?.neighborhood ?? "",
+    city: e?.city ?? "",
+    vehicle_type: e?.vehicle_type ?? "automovel",
+    vehicle_plate: e?.vehicle_plate ?? "",
+    vehicle_brand: e?.vehicle_brand ?? "",
+    vehicle_model: e?.vehicle_model ?? "",
+    vehicle_color: e?.vehicle_color ?? "",
+    notes: e?.notes ?? "",
+    status: (e?.status ?? "active") as "active" | "inactive",
   };
 }

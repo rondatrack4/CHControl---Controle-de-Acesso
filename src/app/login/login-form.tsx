@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2, ShieldCheck, LogIn, DoorOpen, Users, PackageCheck } from "lucide-react";
+import { Loader2, LogIn, DoorOpen, Users, PackageCheck } from "lucide-react";
 import { signInAction, type LoginState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,10 @@ function SubmitButton() {
 
 function Brand({ className = "" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2.5 ${className}`}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-900/30">
-        <ShieldCheck className="h-5 w-5 text-white" />
+    <div className={`flex items-center gap-3 ${className}`}>
+      <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl shadow-lg shadow-blue-900/30 ring-1 ring-white/10">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="CHControl" className="h-full w-full scale-[1.35] object-cover object-center" />
       </span>
       <span className="text-2xl font-bold tracking-tight">
         <span className="text-blue-500">CH</span>

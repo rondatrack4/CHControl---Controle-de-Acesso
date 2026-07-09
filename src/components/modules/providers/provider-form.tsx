@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,9 +30,10 @@ import { ResidentCombobox } from "@/components/shared/resident-combobox";
 import { maskCNPJ, maskCPF, residenceLabel } from "@/lib/utils";
 import { maskRG, formatPlateMercosul, formatPlateOld } from "@/lib/masks";
 import { useEnterSubmit } from "@/lib/form-utils";
+import { MARITAL_STATUS_LABELS } from "@/lib/constants";
 import { createProvider, updateProvider } from "@/app/(app)/prestadores/actions";
 import type { KnownPersonResult } from "@/app/(app)/acessos/actions";
-import type { ServiceProvider, Resident, DocumentType, CpfCnpjKind } from "@/lib/database.types";
+import type { ServiceProvider, Resident, DocumentType, CpfCnpjKind, MaritalStatus } from "@/lib/database.types";
 
 interface ProviderFormProps {
   open: boolean;
@@ -70,9 +72,10 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
 
   function submit() {
     startTransition(async () => {
+      const payload = { ...form, marital_status: (form.marital_status || null) as MaritalStatus | null };
       const res = editing
-        ? await updateProvider(provider!.id, form)
-        : await createProvider(form);
+        ? await updateProvider(provider!.id, payload)
+        : await createProvider(payload);
       if (res.ok) {
         toast.success(editing ? "Prestador atualizado." : "Prestador cadastrado.");
         if (!editing && res.id) {
@@ -112,7 +115,7 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
     if (!provider) return;
     const status = blocked ? "inactive" : "active";
     startTransition(async () => {
-      const res = await updateProvider(provider.id, { ...form, status });
+      const res = await updateProvider(provider.id, { ...form, marital_status: (form.marital_status || null) as MaritalStatus | null, status });
       if (res.ok) {
         toast.success(blocked ? "Prestador bloqueado." : "Prestador desbloqueado.");
         set("status", status);
@@ -169,7 +172,7 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
           </div>
         </DialogHeader>
 
-        <div className="space-y-5" onKeyDown={useEnterSubmit(submit)}>
+        <div className="max-h-[65vh] space-y-5 overflow-y-auto pr-1" onKeyDown={useEnterSubmit(submit)}>
           {/* Morador vinculado */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -203,6 +206,18 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
               </Field>
               <Field label="Empresa">
                 <Input value={form.company_name ?? ""} onChange={(e) => set("company_name", e.target.value)} />
+              </Field>
+              <Field label="Estado civil">
+                <Select value={form.marital_status || ""} onValueChange={(v) => set("marital_status", v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(MARITAL_STATUS_LABELS).map(([v, label]) => (
+                      <SelectItem key={v} value={v}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label={form.cpf_type === "cnpj" ? "CNPJ" : "CPF"}>
                 <div className="flex gap-2">
@@ -256,17 +271,17 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
             </div>
           </div>
 
-          {/* Documento (foto) */}
+          {/* Documentos */}
           <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
             <div className="flex items-center gap-2">
               <IdCard className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold">Documento</h3>
+              <h3 className="font-semibold">Documentos</h3>
             </div>
-            <DocumentUpload
-              value={form.document_photo_url}
-              onChange={(url) => set("document_photo_url", url)}
-              folder="provider-documents"
-            />
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <DocumentUpload label="Documento (RG/CNH)" value={form.document_photo_url} onChange={(url) => set("document_photo_url", url)} folder="provider-documents" framed />
+              <DocumentUpload label="Antecedentes Criminais" value={form.document_criminal_url} onChange={(url) => set("document_criminal_url", url)} folder="provider-documents" framed />
+              <DocumentUpload label="Comprovante de Endereço" value={form.document_address_url} onChange={(url) => set("document_address_url", url)} folder="provider-documents" framed />
+            </div>
           </div>
 
           {/* Veículo */}
@@ -323,6 +338,15 @@ export function ProviderForm({ open, onOpenChange, provider, residents, onCreate
               </Field>
             </div>
           </div>
+
+          {/* Observações */}
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+            <div className="flex items-center gap-2">
+              <UserRound className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold">Observações</h3>
+            </div>
+            <Textarea value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} rows={3} placeholder="Anotações internas sobre o prestador..." />
+          </div>
         </div>
 
         <DialogFooter className="mt-2 gap-2">
@@ -374,6 +398,7 @@ function initial(p?: ServiceProvider | null) {
   return {
     full_name: p?.full_name ?? "",
     company_name: p?.company_name ?? "",
+    marital_status: p?.marital_status ?? "",
     cpf: p?.cpf ?? "",
     cpf_type: (p?.cpf_type ?? "cpf") as CpfCnpjKind,
     document_type: (p?.document_type ?? "rg") as DocumentType,
@@ -386,7 +411,10 @@ function initial(p?: ServiceProvider | null) {
     vehicle_model: p?.vehicle_model ?? "",
     vehicle_color: p?.vehicle_color ?? "",
     document_photo_url: p?.document_photo_url ?? null,
+    document_criminal_url: p?.document_criminal_url ?? null,
+    document_address_url: p?.document_address_url ?? null,
     service_type: p?.service_type ?? "",
+    notes: p?.notes ?? "",
     resident_id: p?.resident_id ?? "",
     category: p?.category ?? "prestador_servico",
     status: (p?.status ?? "active") as "active" | "inactive",

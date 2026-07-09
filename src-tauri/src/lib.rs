@@ -1,10 +1,68 @@
 use std::net::TcpStream;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_updater::UpdaterExt;
+
+/// Verifica se há uma versão nova publicada, baixa, instala e reinicia o app —
+/// sem precisar desinstalar. Acionado pelo menu "Ajuda → Verificar atualizações".
+async fn check_and_install(app: AppHandle) {
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => {
+            app.dialog()
+                .message(format!("Não foi possível iniciar o verificador de atualizações.\n\n{e}"))
+                .title("Atualização")
+                .kind(MessageDialogKind::Error)
+                .show(|_| {});
+            return;
+        }
+    };
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let version = update.version.clone();
+            match update.download_and_install(|_downloaded, _total| {}, || {}).await {
+                Ok(_) => {
+                    app.dialog()
+                        .message(format!(
+                            "A versão {version} foi instalada com sucesso. O CHControl será reiniciado para concluir a atualização."
+                        ))
+                        .title("Atualização concluída")
+                        .kind(MessageDialogKind::Info)
+                        .blocking_show();
+                    app.restart();
+                }
+                Err(e) => {
+                    app.dialog()
+                        .message(format!("Falha ao baixar/instalar a atualização.\n\n{e}"))
+                        .title("Atualização")
+                        .kind(MessageDialogKind::Error)
+                        .show(|_| {});
+                }
+            }
+        }
+        Ok(None) => {
+            app.dialog()
+                .message("Você já está usando a versão mais recente do CHControl.")
+                .title("Verificar atualizações")
+                .kind(MessageDialogKind::Info)
+                .show(|_| {});
+        }
+        Err(e) => {
+            app.dialog()
+                .message(format!(
+                    "Não foi possível verificar atualizações agora. Verifique sua conexão e tente novamente.\n\n{e}"
+                ))
+                .title("Verificar atualizações")
+                .kind(MessageDialogKind::Error)
+                .show(|_| {});
+        }
+    }
+}
 
 /// Porta local onde o sidecar Node (Next.js standalone) escuta.
 const SIDECAR_PORT: u16 = 34115;
@@ -28,11 +86,11 @@ pub fn run() {
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(None)))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .menu(|handle| {
             // Barra de menus nativa exibida na barra de título (Windows).
             let arquivo = SubmenuBuilder::new(handle, "Arquivo")
                 .item(&MenuItemBuilder::new("Recarregar").id("reload").accelerator("CmdOrCtrl+R").build(handle)?)
-                .item(&MenuItemBuilder::new("Imprimir").id("print").accelerator("CmdOrCtrl+P").build(handle)?)
                 .separator()
                 .item(&PredefinedMenuItem::quit(handle, Some("Sair"))?)
                 .build()?;
@@ -43,7 +101,6 @@ pub fn run() {
                 .item(&PredefinedMenuItem::cut(handle, Some("Recortar"))?)
                 .item(&PredefinedMenuItem::copy(handle, Some("Copiar"))?)
                 .item(&PredefinedMenuItem::paste(handle, Some("Colar"))?)
-                .item(&PredefinedMenuItem::select_all(handle, Some("Selecionar tudo"))?)
                 .build()?;
             let exibir = SubmenuBuilder::new(handle, "Exibir")
                 .item(&MenuItemBuilder::new("Recarregar").id("reload2").accelerator("F5").build(handle)?)
@@ -74,11 +131,6 @@ pub fn run() {
                         let _ = w.eval("window.location.reload()");
                     }
                 }
-                "print" => {
-                    if let Some(w) = win {
-                        let _ = w.eval("window.print()");
-                    }
-                }
                 "zoom_in" => {
                     if let Some(w) = win {
                         let _ = w.eval("var b=document.body,z=parseFloat(b.style.zoom||'1');b.style.zoom=(z+0.1).toFixed(2);");
@@ -101,11 +153,10 @@ pub fn run() {
                     }
                 }
                 "check_updates" => {
-                    app.dialog()
-                        .message("Você está usando a versão mais recente (v1.0).")
-                        .title("Verificar atualizações")
-                        .kind(MessageDialogKind::Info)
-                        .show(|_| {});
+                    let handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        check_and_install(handle).await;
+                    });
                 }
                 "about" => {
                     app.dialog()
@@ -126,8 +177,10 @@ pub fn run() {
                 )?;
             }
 
-            // Pasta de dados do app (SQLite + mídia) em %APPDATA%/CHControl.
-            let data_dir = app.path().app_data_dir()?;
+            // Pasta de dados FIXA em %APPDATA%/CHControl — estável entre versões e
+            // reinstalações (NÃO usa app_data_dir(), que deriva do identifier do
+            // bundle e mudava a pasta a cada build, "resetando" os dados).
+            let data_dir = app.path().data_dir()?.join("CHControl");
             std::fs::create_dir_all(&data_dir).ok();
 
             // Em dev, o Next roda via `beforeDevCommand` (npm run dev, porta 3000).
@@ -144,13 +197,33 @@ pub fn run() {
                 } else {
                     "node".into()
                 });
-                cmd.arg(&server_js)
+                // Passa "server.js" relativo (cwd já é a pasta do server). Caminho
+                // absoluto estava chegando corrompido ao node ("EISDIR: lstat 'C:'").
+                cmd.arg("server.js")
                     .env("APP_MODE", "desktop")
                     .env("NEXT_PUBLIC_APP_MODE", "desktop")
                     .env("APP_DATA_DIR", &data_dir)
                     .env("PORT", SIDECAR_PORT.to_string())
                     .env("HOSTNAME", "127.0.0.1")
                     .current_dir(server_js.parent().unwrap());
+
+                // CRÍTICO: o app.exe é um processo GUI sem console. Se o sidecar
+                // herdar stdout/stderr (handles inválidos), o Next.js quebra ao
+                // logar "Ready" e o servidor morre na hora. Redireciona para um
+                // arquivo de log — corrige o crash e ainda registra erros.
+                match std::fs::File::create(data_dir.join("sidecar.log")) {
+                    Ok(f) => match f.try_clone() {
+                        Ok(f2) => {
+                            cmd.stdout(Stdio::from(f)).stderr(Stdio::from(f2));
+                        }
+                        Err(_) => {
+                            cmd.stdout(Stdio::null()).stderr(Stdio::null());
+                        }
+                    },
+                    Err(_) => {
+                        cmd.stdout(Stdio::null()).stderr(Stdio::null());
+                    }
+                }
 
                 #[cfg(windows)]
                 {

@@ -44,9 +44,12 @@ export const residentSchema = z.object({
   notes: optionalString,
 });
 
+const MARITAL_STATUS_ENUM = z.enum(["solteiro", "casado", "divorciado", "viuvo", "uniao_estavel"]).optional().nullable();
+
 export const visitorSchema = z.object({
   full_name: z.string().trim().min(3, "Nome deve ter ao menos 3 caracteres."),
   company_name: optionalString,
+  marital_status: MARITAL_STATUS_ENUM,
   cpf: optionalString,
   cpf_type: z.enum(["cpf", "cnpj"]),
   document_type: z.enum(["rg", "cnh"]),
@@ -60,12 +63,16 @@ export const visitorSchema = z.object({
   vehicle_model: optionalString,
   vehicle_color: optionalString,
   document_photo_url: optionalString,
+  document_criminal_url: optionalString,
+  document_address_url: optionalString,
+  notes: optionalString,
   status: z.enum(["active", "inactive"]),
 });
 
 export const serviceProviderSchema = z.object({
   full_name: z.string().trim().min(3, "Nome deve ter ao menos 3 caracteres."),
   company_name: optionalString,
+  marital_status: MARITAL_STATUS_ENUM,
   cpf: optionalString,
   cpf_type: z.enum(["cpf", "cnpj"]),
   document_type: z.enum(["rg", "cnh"]),
@@ -77,11 +84,77 @@ export const serviceProviderSchema = z.object({
   vehicle_model: optionalString,
   vehicle_color: optionalString,
   document_photo_url: optionalString,
+  document_criminal_url: optionalString,
+  document_address_url: optionalString,
   service_type: optionalString,
+  notes: optionalString,
   resident_id: z.string().uuid().optional().nullable(),
   category: z.enum(VISITOR_CATEGORIES).default("prestador_servico"),
   status: z.enum(["active", "inactive"]),
 });
+
+const MARITAL_STATUSES = ["solteiro", "casado", "divorciado", "viuvo", "uniao_estavel"] as const;
+
+export const employeeSchema = z.object({
+  full_name: z.string().trim().min(3, "Nome deve ter ao menos 3 caracteres."),
+  company_name: optionalString,
+  role_title: optionalString,
+  marital_status: z.enum(MARITAL_STATUSES).optional().nullable(),
+  cpf: optionalString,
+  cpf_type: z.enum(["cpf", "cnpj"]).default("cpf"),
+  document_type: z.enum(["rg", "cnh"]).default("rg"),
+  document_number: optionalString,
+  document_photo_url: optionalString,
+  document_criminal_url: optionalString,
+  document_address_url: optionalString,
+  photo_url: optionalString,
+  phone: optionalString,
+  mobile: optionalString,
+  whatsapp: optionalString,
+  email: z.string().trim().email("E-mail inválido.").optional().or(z.literal("")).nullable(),
+  cep: optionalString,
+  street: optionalString,
+  number: optionalString,
+  complement: optionalString,
+  neighborhood: optionalString,
+  city: optionalString,
+  vehicle_type: optionalString,
+  vehicle_plate: optionalString,
+  vehicle_brand: optionalString,
+  vehicle_model: optionalString,
+  vehicle_color: optionalString,
+  notes: optionalString,
+  status: z.enum(["active", "inactive"]).default("active"),
+});
+export type EmployeeInput = z.infer<typeof employeeSchema>;
+
+// --- Chaves ---
+export const keySchema = z.object({
+  code: z.string().trim().min(1, "Informe o código da chave."),
+  name: z.string().trim().min(1, "Informe o nome da chave."),
+  location: optionalString,
+  unit: optionalString,
+  description: optionalString,
+  notes: optionalString,
+  status: z.enum(["available", "lent", "inactive"]).default("available"),
+});
+export type KeyInput = z.infer<typeof keySchema>;
+
+export const lendKeySchema = z.object({
+  key_id: z.string().uuid(),
+  employee_id: z.string().uuid("Selecione um funcionário."),
+  lent_at: z.string().min(1, "Informe a data/hora da retirada."),
+  expected_return_at: optionalString,
+  lend_notes: optionalString,
+});
+export type LendKeyInput = z.infer<typeof lendKeySchema>;
+
+export const returnKeySchema = z.object({
+  loan_id: z.string().uuid(),
+  returned_at: z.string().min(1, "Informe a data/hora da devolução."),
+  return_notes: optionalString,
+});
+export type ReturnKeyInput = z.infer<typeof returnKeySchema>;
 
 // --- Destino de uma visita (multi-destino) ---
 export const destinationSchema = z.object({

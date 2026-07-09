@@ -8,6 +8,6 @@ export const dynamic = "force-dynamic";
 export default async function UnidadesPage() {
   await requireSession();
   const supabase = await createClient();
-  const { data } = await supabase.from("units").select("*").eq("status", "active").order("updated_at", { ascending: false });
+  const { data } = await supabase.from("units").select("*").order("updated_at", { ascending: false });
   return <UnitsClient units={(data as Unit[]) ?? []} />;
 }

@@ -1,10 +1,10 @@
 [package]
 name = "app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-license = ""
-repository = ""
+description = "CHControl — Sistema de Controle de Acesso para Condomínios"
+authors = ["CHControl"]
+license = "Proprietary"
+repository = "https://github.com/rondatrack4/CHControl---Controle-de-Acesso"
 edition = "2021"
 rust-version = "1.77.2"
 
@@ -24,3 +24,4 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-updater = "2"

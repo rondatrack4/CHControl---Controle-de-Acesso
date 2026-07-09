@@ -11,7 +11,7 @@ export interface ActionResult {
   error?: string;
 }
 
-export async function createUnit(data: {
+export interface UnitData {
   unit_type: ResidenceType;
   block?: string | null;
   apartment?: string | null;
@@ -19,7 +19,27 @@ export async function createUnit(data: {
   lote?: string | null;
   owner_name?: string | null;
   owner_phone?: string | null;
-}): Promise<ActionResult> {
+  owner_email?: string | null;
+  owner_document?: string | null;
+  notes?: string | null;
+}
+
+function clean(data: UnitData) {
+  return {
+    unit_type: data.unit_type,
+    block: data.block || null,
+    apartment: data.apartment || null,
+    quadra: data.quadra || null,
+    lote: data.lote || null,
+    owner_name: data.owner_name || null,
+    owner_phone: data.owner_phone || null,
+    owner_email: data.owner_email || null,
+    owner_document: data.owner_document || null,
+    notes: data.notes || null,
+  };
+}
+
+export async function createUnit(data: UnitData): Promise<ActionResult> {
   const session = await requireSession();
   if (!session.company) return { ok: false, error: "Empresa não identificada." };
 
@@ -29,13 +49,7 @@ export async function createUnit(data: {
     : `Quadra ${data.quadra}, Lote ${data.lote}`;
 
   const { error } = await supabase.from("units").insert({
-    unit_type: data.unit_type,
-    block: data.block || null,
-    apartment: data.apartment || null,
-    quadra: data.quadra || null,
-    lote: data.lote || null,
-    owner_name: data.owner_name || null,
-    owner_phone: data.owner_phone || null,
+    ...clean(data),
     status: "active" as RecordStatus,
     company_id: session.company.id,
   });
@@ -50,11 +64,16 @@ export async function createUnit(data: {
   return { ok: true };
 }
 
-export async function updateUnit(id: string, data: { owner_name?: string | null; owner_phone?: string | null; status?: RecordStatus }): Promise<ActionResult> {
+export async function updateUnit(id: string, data: Partial<UnitData> & { status?: RecordStatus }): Promise<ActionResult> {
   const session = await requireSession();
   const supabase = await createClient();
-  const { error } = await supabase.from("units").update(data).eq("id", id);
-  if (error) return { ok: false, error: error.message };
+  const patch: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(data)) patch[k] = v === undefined ? undefined : (typeof v === "string" ? v || null : v);
+  const { error } = await supabase.from("units").update(patch).eq("id", id);
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "Esta unidade já existe." };
+    return { ok: false, error: error.message };
+  }
   await logAudit({ action: "update", entity: "unit", entityId: id, details: data, session });
   revalidatePath("/unidades");
   return { ok: true };

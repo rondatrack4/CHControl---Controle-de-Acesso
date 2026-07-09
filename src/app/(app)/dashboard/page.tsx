@@ -211,9 +211,9 @@ export default async function DashboardPage() {
       <DashboardCharts
         entriesPerDay={days}
         entriesPerMonth={months}
-        accessTypes={accessTypes.length ? accessTypes : [{ name: "Sem dados", value: 1 }]}
+        accessTypes={accessTypes}
         peakHours={peakHours}
-        correspondenceStatus={correspondenceStatus.length ? correspondenceStatus : [{ name: "Sem dados", value: 1 }]}
+        correspondenceStatus={correspondenceStatus}
       />
     </>
   );
