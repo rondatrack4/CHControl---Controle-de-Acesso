@@ -1,5 +1,5 @@
 use std::net::TcpStream;
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
@@ -151,6 +151,24 @@ pub fn run() {
                     .env("PORT", SIDECAR_PORT.to_string())
                     .env("HOSTNAME", "127.0.0.1")
                     .current_dir(server_js.parent().unwrap());
+
+                // CRÍTICO: o app.exe é um processo GUI sem console. Se o sidecar
+                // herdar stdout/stderr (handles inválidos), o Next.js quebra ao
+                // logar "Ready" e o servidor morre na hora. Redireciona para um
+                // arquivo de log — corrige o crash e ainda registra erros.
+                match std::fs::File::create(data_dir.join("sidecar.log")) {
+                    Ok(f) => match f.try_clone() {
+                        Ok(f2) => {
+                            cmd.stdout(Stdio::from(f)).stderr(Stdio::from(f2));
+                        }
+                        Err(_) => {
+                            cmd.stdout(Stdio::null()).stderr(Stdio::null());
+                        }
+                    },
+                    Err(_) => {
+                        cmd.stdout(Stdio::null()).stderr(Stdio::null());
+                    }
+                }
 
                 #[cfg(windows)]
                 {
