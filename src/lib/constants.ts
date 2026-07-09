@@ -13,6 +13,8 @@ import {
   PackageSearch,
   Repeat,
   Activity,
+  KeyRound,
+  Contact,
   type LucideIcon,
 } from "lucide-react";
 import type { UserRole } from "@/lib/database.types";
@@ -30,7 +32,9 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Moradores", href: "/moradores", icon: Users },
   { label: "Visitantes", href: "/visitantes", icon: UserPlus },
   { label: "Prestadores", href: "/prestadores", icon: Wrench },
+  { label: "Funcionários", href: "/funcionarios", icon: Contact },
   { label: "Unidades", href: "/unidades", icon: Home },
+  { label: "Chaves", href: "/chaves", icon: KeyRound },
   { label: "Recorrente", href: "/recorrentes", icon: Repeat },
   { label: "Monitoramento", href: "/monitoramento", icon: Activity },
   { label: "Correspondências", href: "/correspondencias", icon: PackageSearch },
@@ -119,6 +123,28 @@ export const STATUS_LABELS: Record<string, string> = {
 export const GENDER_LABELS: Record<string, string> = {
   male: "Masculino",
   female: "Feminino",
+};
+
+export const MARITAL_STATUS_LABELS: Record<string, string> = {
+  solteiro: "Solteiro(a)",
+  casado: "Casado(a)",
+  divorciado: "Divorciado(a)",
+  viuvo: "Viúvo(a)",
+  uniao_estavel: "União Estável",
+};
+
+export const KEY_STATUS_LABELS: Record<string, string> = {
+  available: "Disponível",
+  lent: "Pendente de Devolução",
+  inactive: "Inativa",
+};
+
+export const VEHICLE_TYPE_LABELS: Record<string, string> = {
+  automovel: "Automóvel",
+  moto: "Moto",
+  caminhao: "Caminhão",
+  bicicleta: "Bicicleta",
+  outro: "Outro",
 };
 
 /** Rótulo do papel de acesso, flexionado conforme o gênero quando disponível. */

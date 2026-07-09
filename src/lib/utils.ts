@@ -121,6 +121,21 @@ export function formatElapsed(start: string | Date): string {
   return `${hours}h ${minutes}min`;
 }
 
+/** Duração legível entre dois instantes (usa "agora" se o fim for omitido). */
+export function formatDurationBetween(start: string | Date, end?: string | Date | null): string {
+  const startDate = typeof start === "string" ? new Date(start) : start;
+  const endDate = end ? (typeof end === "string" ? new Date(end) : end) : new Date();
+  const ms = endDate.getTime() - startDate.getTime();
+  const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return hours === 0 ? `${days}d` : `${days}d ${hours}h`;
+  if (hours === 0) return `${minutes}min`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}min`;
+}
+
 export type RecurringAuthComputedStatus = "active" | "expiring" | "expired" | "inactive";
 
 /** Deriva o status visível de uma autorização recorrente a partir de status manual + data de validade. */

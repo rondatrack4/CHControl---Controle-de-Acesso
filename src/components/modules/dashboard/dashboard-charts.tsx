@@ -12,7 +12,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
-import { TrendingUp, CalendarDays, Users, Clock, Package } from "lucide-react";
+import { TrendingUp, CalendarDays, Users, Clock, Package, Inbox } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -74,35 +74,51 @@ const tooltipStyle = {
   boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
 };
 
-/** Lista de distribuição com barra de progresso — leitura rápida, sem gráfico de pizza. */
-function DistributionList({
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="flex h-[220px] flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+      <Inbox className="h-8 w-8 opacity-40" />
+      <p className="text-sm">{label}</p>
+    </div>
+  );
+}
+
+/**
+ * Distribuição em barras horizontais, sem "bolinhas" — leitura limpa e
+ * profissional. Cada linha mostra rótulo, contagem, percentual e barra colorida.
+ */
+function StatusBreakdown({
   items,
   colorFor,
+  emptyLabel,
 }: {
   items: { name: string; value: number }[];
   colorFor: (name: string, index: number) => string;
+  emptyLabel: string;
 }) {
-  const total = items.reduce((a, i) => a + i.value, 0) || 1;
+  const total = items.reduce((a, i) => a + i.value, 0);
+  if (total === 0) return <EmptyState label={emptyLabel} />;
+
+  const sorted = [...items].sort((a, b) => b.value - a.value);
   return (
-    <div className="space-y-3.5 py-2">
-      {items.map((item, i) => {
+    <div className="space-y-4 py-2">
+      {sorted.map((item, i) => {
         const pct = Math.round((item.value / total) * 100);
         const color = colorFor(item.name, i);
         return (
           <div key={item.name} className="space-y-1.5">
             <div className="flex items-center justify-between text-sm">
-              <span className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-                <span className="font-medium">{item.name}</span>
-              </span>
+              <span className="font-medium">{item.name}</span>
               <span className="tabular-nums text-muted-foreground">
-                <span className="font-semibold text-foreground">{item.value}</span> · {pct}%
+                <span className="font-semibold text-foreground">{item.value}</span>
+                <span className="mx-1 text-muted-foreground/50">·</span>
+                {pct}%
               </span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full rounded-full transition-all"
-                style={{ width: `${pct}%`, background: color }}
+                className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(pct, 3)}%`, background: color }}
               />
             </div>
           </div>
@@ -121,6 +137,7 @@ export function DashboardCharts({
 }: ChartsProps) {
   const accessTypesTotal = sum(accessTypes);
   const correspondenceTotal = sum(correspondenceStatus);
+  const hasPeak = sum(peakHours) > 0;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -181,52 +198,48 @@ export function DashboardCharts({
       <Card className="overflow-hidden">
         <ChartCardHeader icon={Users} title="Tipos de acesso" total={accessTypesTotal} totalLabel="registros" />
         <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={accessTypes} layout="vertical" margin={{ left: 8, right: 16 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-              <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                width={80}
-              />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(37,99,235,0.06)" }} />
-              <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={34}>
-                {accessTypes.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          {accessTypesTotal === 0 ? (
+            <EmptyState label="Nenhum acesso registrado no período." />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={accessTypes} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" fontSize={12} tickLine={false} axisLine={false} width={80} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(37,99,235,0.06)" }} />
+                <Bar dataKey="value" radius={[0, 6, 6, 0]} maxBarSize={34}>
+                  {accessTypes.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
       <Card className="overflow-hidden">
-        <ChartCardHeader
-          icon={Clock}
-          title="Horários de maior movimentação"
-          total={sum(peakHours)}
-          totalLabel="acessos"
-        />
+        <ChartCardHeader icon={Clock} title="Horários de maior movimentação" total={sum(peakHours)} totalLabel="acessos" />
         <CardContent>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={peakHours} margin={{ left: -20, right: 8 }}>
-              <defs>
-                <linearGradient id="colorHoursBar" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0.6} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-              <XAxis dataKey="hora" fontSize={10} tickLine={false} axisLine={false} interval={1} />
-              <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(22,163,74,0.06)" }} />
-              <Bar dataKey="acessos" fill="url(#colorHoursBar)" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {!hasPeak ? (
+            <EmptyState label="Sem movimentação registrada ainda." />
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={peakHours} margin={{ left: -20, right: 8 }}>
+                <defs>
+                  <linearGradient id="colorHoursBar" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#16a34a" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#16a34a" stopOpacity={0.6} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <XAxis dataKey="hora" fontSize={10} tickLine={false} axisLine={false} interval={1} />
+                <YAxis fontSize={11} tickLine={false} axisLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgba(22,163,74,0.06)" }} />
+                <Bar dataKey="acessos" fill="url(#colorHoursBar)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -238,9 +251,10 @@ export function DashboardCharts({
           totalLabel="correspondências"
         />
         <CardContent>
-          <DistributionList
+          <StatusBreakdown
             items={correspondenceStatus}
             colorFor={(name, i) => CORRESPONDENCE_COLORS[name] ?? COLORS[i % COLORS.length]}
+            emptyLabel="Nenhuma correspondência registrada."
           />
         </CardContent>
       </Card>

@@ -28,6 +28,7 @@ const JSON_COLUMNS: Record<string, string[]> = {
   correspondences: ["entry_photos"],
 };
 
+// (employees, keys, key_loans, units entram na fila de sincronização normalmente)
 // Tabelas que só existem no app desktop — não entram na fila de sincronização.
 const DESKTOP_ONLY_TABLES = new Set([
   "install_config",
@@ -104,6 +105,10 @@ const TIMESTAMP_COLUMNS: Record<string, { created?: boolean; updated?: boolean }
   correspondences: { created: true, updated: true },
   recurring_authorizations: { created: true, updated: true },
   access_log_destinations: { created: true },
+  units: { created: true, updated: true },
+  employees: { created: true, updated: true },
+  keys: { created: true, updated: true },
+  key_loans: { created: true, updated: true },
 };
 
 type Row = Record<string, unknown>;
@@ -760,11 +765,83 @@ export function getLocalDb(): Database.Database {
     db.exec(fs.readFileSync(migrationPath, "utf-8"));
   }
 
+  // Cria tabelas que podem faltar em bancos antigos (units nunca foi ligada ao
+  // runner) + as novas de funcionários e chaves. Roda ANTES dos ensureColumn
+  // de units, pois a tabela pode não existir ainda. Idempotente.
+  ensureSchema(db);
+
   // Migrações idempotentes para bancos já existentes (colunas novas).
   ensureColumn(db, "profiles", "gender", "TEXT");
 
+  // Colunas novas em visitantes/prestadores: empresa (já existe), estado civil,
+  // observações e uploads de antecedentes/comprovante de endereço.
+  for (const t of ["visitors", "service_providers"]) {
+    ensureColumn(db, t, "marital_status", "TEXT");
+    ensureColumn(db, t, "notes", "TEXT");
+    ensureColumn(db, t, "document_criminal_url", "TEXT");
+    ensureColumn(db, t, "document_address_url", "TEXT");
+    ensureColumn(db, t, "vehicle_type", "TEXT");
+  }
+
+  // Unidades: campos extras para um cadastro mais completo.
+  ensureColumn(db, "units", "owner_email", "TEXT");
+  ensureColumn(db, "units", "owner_document", "TEXT");
+  ensureColumn(db, "units", "notes", "TEXT");
+
   dbInstance = db;
   return db;
+}
+
+/**
+ * Aplica de forma idempotente as tabelas que precisam valer também para bancos
+ * já existentes (o runner só roda 0001 em banco novo). SQL embutido (não lê
+ * arquivos) para funcionar mesmo que a pasta de migrações não esteja no pacote.
+ * Espelha local-db/migrations/0002_units.sql e 0003_employees_keys.sql.
+ */
+function ensureSchema(db: Database.Database) {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS units (
+      id TEXT PRIMARY KEY, company_id TEXT NOT NULL,
+      unit_type TEXT NOT NULL, block TEXT, apartment TEXT, quadra TEXT, lote TEXT,
+      owner_name TEXT, owner_phone TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_units_company ON units(company_id);
+
+    CREATE TABLE IF NOT EXISTS employees (
+      id TEXT PRIMARY KEY, company_id TEXT NOT NULL,
+      full_name TEXT NOT NULL, company_name TEXT, role_title TEXT, marital_status TEXT,
+      cpf TEXT, cpf_type TEXT NOT NULL DEFAULT 'cpf', document_type TEXT NOT NULL DEFAULT 'rg',
+      document_number TEXT, document_photo_url TEXT, document_criminal_url TEXT, document_address_url TEXT,
+      photo_url TEXT, phone TEXT, mobile TEXT, whatsapp TEXT, email TEXT,
+      cep TEXT, street TEXT, number TEXT, complement TEXT, neighborhood TEXT, city TEXT,
+      vehicle_type TEXT, vehicle_plate TEXT, vehicle_brand TEXT, vehicle_model TEXT, vehicle_color TEXT,
+      notes TEXT, status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS employees_company_id_idx ON employees(company_id);
+
+    CREATE TABLE IF NOT EXISTS keys (
+      id TEXT PRIMARY KEY, company_id TEXT NOT NULL,
+      code TEXT NOT NULL, name TEXT NOT NULL, location TEXT, unit TEXT,
+      description TEXT, notes TEXT, status TEXT NOT NULL DEFAULT 'available',
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS keys_company_id_idx ON keys(company_id);
+
+    CREATE TABLE IF NOT EXISTS key_loans (
+      id TEXT PRIMARY KEY, company_id TEXT NOT NULL, key_id TEXT NOT NULL,
+      key_code TEXT, key_name TEXT, employee_id TEXT, employee_name TEXT NOT NULL,
+      lent_by_id TEXT, lent_by_name TEXT, returned_by_id TEXT, returned_by_name TEXT,
+      lent_at TEXT NOT NULL, expected_return_at TEXT, returned_at TEXT,
+      lend_notes TEXT, return_notes TEXT, status TEXT NOT NULL DEFAULT 'open',
+      created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS key_loans_company_id_idx ON key_loans(company_id);
+    CREATE INDEX IF NOT EXISTS key_loans_key_id_idx ON key_loans(key_id);
+    CREATE INDEX IF NOT EXISTS key_loans_status_idx ON key_loans(status);
+  `);
 }
 
 /** Adiciona uma coluna a uma tabela apenas se ainda não existir (seguro em bancos antigos). */

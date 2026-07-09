@@ -11,6 +11,9 @@ export type RecordStatus = "active" | "inactive";
 export type CpfCnpjKind = "cpf" | "cnpj";
 export type PhoneKind = "fixo" | "whatsapp";
 export type Gender = "male" | "female";
+export type MaritalStatus = "solteiro" | "casado" | "divorciado" | "viuvo" | "uniao_estavel";
+export type KeyStatus = "available" | "lent" | "inactive";
+export type KeyLoanStatus = "open" | "returned";
 
 export interface ResidenceEntry {
   residence_type: ResidenceType;
@@ -88,7 +91,82 @@ export interface Unit {
   lote: string | null;
   owner_name: string | null;
   owner_phone: string | null;
+  owner_email: string | null;
+  owner_document: string | null;
+  notes: string | null;
   status: RecordStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Employee {
+  id: string;
+  company_id: string;
+  full_name: string;
+  company_name: string | null;
+  role_title: string | null;
+  marital_status: MaritalStatus | null;
+  cpf: string | null;
+  cpf_type: CpfCnpjKind;
+  document_type: DocumentType;
+  document_number: string | null;
+  document_photo_url: string | null;
+  document_criminal_url: string | null;
+  document_address_url: string | null;
+  photo_url: string | null;
+  phone: string | null;
+  mobile: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  cep: string | null;
+  street: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  vehicle_type: string | null;
+  vehicle_plate: string | null;
+  vehicle_brand: string | null;
+  vehicle_model: string | null;
+  vehicle_color: string | null;
+  notes: string | null;
+  status: RecordStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KeyItem {
+  id: string;
+  company_id: string;
+  code: string;
+  name: string;
+  location: string | null;
+  unit: string | null;
+  description: string | null;
+  notes: string | null;
+  status: KeyStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KeyLoan {
+  id: string;
+  company_id: string;
+  key_id: string;
+  key_code: string | null;
+  key_name: string | null;
+  employee_id: string | null;
+  employee_name: string;
+  lent_by_id: string | null;
+  lent_by_name: string | null;
+  returned_by_id: string | null;
+  returned_by_name: string | null;
+  lent_at: string;
+  expected_return_at: string | null;
+  returned_at: string | null;
+  lend_notes: string | null;
+  return_notes: string | null;
+  status: KeyLoanStatus;
   created_at: string;
   updated_at: string;
 }
@@ -133,12 +211,16 @@ export interface Visitor {
   photo_url: string | null;
   resident_id: string | null;
   category: VisitorCategory;
+  marital_status: MaritalStatus | null;
   vehicle_type: string | null;
   vehicle_plate: string | null;
   vehicle_brand: string | null;
   vehicle_model: string | null;
   vehicle_color: string | null;
   document_photo_url: string | null;
+  document_criminal_url: string | null;
+  document_address_url: string | null;
+  notes: string | null;
   status: RecordStatus;
   created_at: string;
   updated_at: string;
@@ -161,7 +243,11 @@ export interface ServiceProvider {
   vehicle_model: string | null;
   vehicle_color: string | null;
   document_photo_url: string | null;
+  document_criminal_url: string | null;
+  document_address_url: string | null;
   service_type: string | null;
+  marital_status: MaritalStatus | null;
+  notes: string | null;
   resident_id: string | null;
   category: VisitorCategory;
   status: RecordStatus;
@@ -344,6 +430,10 @@ export interface Database {
       notifications: { Row: Row<Notification>; Insert: Insert<Notification>; Update: Update<Notification>; Relationships: [] };
       audit_logs: { Row: Row<AuditLog>; Insert: Insert<AuditLog>; Update: Update<AuditLog>; Relationships: [] };
       correspondences: { Row: Row<Correspondence>; Insert: Insert<Correspondence>; Update: Update<Correspondence>; Relationships: [] };
+      units: { Row: Row<Unit>; Insert: Insert<Unit>; Update: Update<Unit>; Relationships: [] };
+      employees: { Row: Row<Employee>; Insert: Insert<Employee>; Update: Update<Employee>; Relationships: [] };
+      keys: { Row: Row<KeyItem>; Insert: Insert<KeyItem>; Update: Update<KeyItem>; Relationships: [] };
+      key_loans: { Row: Row<KeyLoan>; Insert: Insert<KeyLoan>; Update: Update<KeyLoan>; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {

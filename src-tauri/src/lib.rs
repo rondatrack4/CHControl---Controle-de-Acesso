@@ -3,8 +3,66 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder};
-use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
+use tauri_plugin_updater::UpdaterExt;
+
+/// Verifica se há uma versão nova publicada, baixa, instala e reinicia o app —
+/// sem precisar desinstalar. Acionado pelo menu "Ajuda → Verificar atualizações".
+async fn check_and_install(app: AppHandle) {
+    let updater = match app.updater() {
+        Ok(u) => u,
+        Err(e) => {
+            app.dialog()
+                .message(format!("Não foi possível iniciar o verificador de atualizações.\n\n{e}"))
+                .title("Atualização")
+                .kind(MessageDialogKind::Error)
+                .show(|_| {});
+            return;
+        }
+    };
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            let version = update.version.clone();
+            match update.download_and_install(|_downloaded, _total| {}, || {}).await {
+                Ok(_) => {
+                    app.dialog()
+                        .message(format!(
+                            "A versão {version} foi instalada com sucesso. O CHControl será reiniciado para concluir a atualização."
+                        ))
+                        .title("Atualização concluída")
+                        .kind(MessageDialogKind::Info)
+                        .blocking_show();
+                    app.restart();
+                }
+                Err(e) => {
+                    app.dialog()
+                        .message(format!("Falha ao baixar/instalar a atualização.\n\n{e}"))
+                        .title("Atualização")
+                        .kind(MessageDialogKind::Error)
+                        .show(|_| {});
+                }
+            }
+        }
+        Ok(None) => {
+            app.dialog()
+                .message("Você já está usando a versão mais recente do CHControl.")
+                .title("Verificar atualizações")
+                .kind(MessageDialogKind::Info)
+                .show(|_| {});
+        }
+        Err(e) => {
+            app.dialog()
+                .message(format!(
+                    "Não foi possível verificar atualizações agora. Verifique sua conexão e tente novamente.\n\n{e}"
+                ))
+                .title("Verificar atualizações")
+                .kind(MessageDialogKind::Error)
+                .show(|_| {});
+        }
+    }
+}
 
 /// Porta local onde o sidecar Node (Next.js standalone) escuta.
 const SIDECAR_PORT: u16 = 34115;
@@ -28,11 +86,11 @@ pub fn run() {
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(None)))
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .menu(|handle| {
             // Barra de menus nativa exibida na barra de título (Windows).
             let arquivo = SubmenuBuilder::new(handle, "Arquivo")
                 .item(&MenuItemBuilder::new("Recarregar").id("reload").accelerator("CmdOrCtrl+R").build(handle)?)
-                .item(&MenuItemBuilder::new("Imprimir").id("print").accelerator("CmdOrCtrl+P").build(handle)?)
                 .separator()
                 .item(&PredefinedMenuItem::quit(handle, Some("Sair"))?)
                 .build()?;
@@ -43,7 +101,6 @@ pub fn run() {
                 .item(&PredefinedMenuItem::cut(handle, Some("Recortar"))?)
                 .item(&PredefinedMenuItem::copy(handle, Some("Copiar"))?)
                 .item(&PredefinedMenuItem::paste(handle, Some("Colar"))?)
-                .item(&PredefinedMenuItem::select_all(handle, Some("Selecionar tudo"))?)
                 .build()?;
             let exibir = SubmenuBuilder::new(handle, "Exibir")
                 .item(&MenuItemBuilder::new("Recarregar").id("reload2").accelerator("F5").build(handle)?)
@@ -74,11 +131,6 @@ pub fn run() {
                         let _ = w.eval("window.location.reload()");
                     }
                 }
-                "print" => {
-                    if let Some(w) = win {
-                        let _ = w.eval("window.print()");
-                    }
-                }
                 "zoom_in" => {
                     if let Some(w) = win {
                         let _ = w.eval("var b=document.body,z=parseFloat(b.style.zoom||'1');b.style.zoom=(z+0.1).toFixed(2);");
@@ -101,11 +153,10 @@ pub fn run() {
                     }
                 }
                 "check_updates" => {
-                    app.dialog()
-                        .message("Você está usando a versão mais recente (v1.0).")
-                        .title("Verificar atualizações")
-                        .kind(MessageDialogKind::Info)
-                        .show(|_| {});
+                    let handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        check_and_install(handle).await;
+                    });
                 }
                 "about" => {
                     app.dialog()
