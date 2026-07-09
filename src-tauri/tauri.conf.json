@@ -19,10 +19,8 @@
     "active": true,
     "targets": ["nsis", "msi"],
     "resources": {
-      "resources/server": "server",
-      "resources/server/server.js": "server",
-      "resources/server/package.json": "server",
-      "resources/node": "node"
+      "resources/server/**/*": "server",
+      "resources/node/**/*": "node"
     },
     "icon": [
       "icons/32x32.png",
