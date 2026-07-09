@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldCheck, LogIn, DoorOpen, Users, PackageCheck } from "lucide-react";
 import { signInAction, type LoginState } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,53 +11,97 @@ import { Label } from "@/components/ui/label";
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" size="lg" disabled={pending}>
+    <Button type="submit" className="h-11 w-full text-base" size="lg" disabled={pending}>
       {pending ? (
         <>
           <Loader2 className="animate-spin" /> Entrando...
         </>
       ) : (
-        "Entrar"
+        <>
+          <LogIn className="h-4 w-4" /> Entrar
+        </>
       )}
     </Button>
   );
 }
+
+function Brand({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-2.5 ${className}`}>
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-900/30">
+        <ShieldCheck className="h-5 w-5 text-white" />
+      </span>
+      <span className="text-2xl font-bold tracking-tight">
+        <span className="text-blue-500">CH</span>
+        <span>Control</span>
+      </span>
+    </div>
+  );
+}
+
+const FEATURES = [
+  { icon: DoorOpen, text: "Registro rápido de entradas e saídas" },
+  { icon: Users, text: "Moradores, visitantes e prestadores" },
+  { icon: PackageCheck, text: "Correspondências e histórico completo" },
+];
 
 export function LoginForm() {
   const [state, formAction] = useActionState<LoginState, FormData>(signInAction, {});
 
   return (
     <div className="flex min-h-screen">
-      {/* Painel esquerdo — branding (fundo escuro, como no logo original) */}
-      <div className="hidden w-1/2 flex-col justify-between bg-[#0d1521] p-12 text-white lg:flex">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="CHControl" className="h-11 w-auto" />
-        <div className="space-y-4">
-          <h1 className="text-4xl font-bold leading-tight">
+      {/* Painel esquerdo — branding premium */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-blue-800 p-12 text-white lg:flex">
+        {/* Glows decorativos */}
+        <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-16 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
+        {/* Textura de pontos */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1px)",
+            backgroundSize: "20px 20px",
+          }}
+        />
+
+        <div className="relative">
+          <Brand />
+        </div>
+
+        <div className="relative space-y-6">
+          <h1 className="max-w-md text-4xl font-bold leading-tight">
             Controle de acesso profissional para o seu condomínio
           </h1>
-          <p className="text-lg text-white/70">
-            Gerencie moradores, visitantes e prestadores com segurança,
-            rastreabilidade total e isolamento completo de dados.
+          <p className="max-w-md text-lg text-blue-100/70">
+            Segurança, rastreabilidade total e uma portaria que funciona mesmo sem internet.
           </p>
+          <ul className="space-y-3 pt-2">
+            {FEATURES.map((f) => (
+              <li key={f.text} className="flex items-center gap-3 text-blue-50/90">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm">
+                  <f.icon className="h-4 w-4 text-blue-200" />
+                </span>
+                <span className="text-sm">{f.text}</span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <p className="text-sm text-white/50">
+
+        <p className="relative text-sm text-white/40">
           © {new Date().getFullYear()} CHControl. Todos os direitos reservados.
         </p>
       </div>
 
       {/* Painel direito — formulário */}
-      <div className="flex w-full items-center justify-center p-6 lg:w-1/2">
+      <div className="flex w-full items-center justify-center bg-muted/20 p-6 lg:w-1/2">
         <div className="w-full max-w-sm space-y-8">
-          <div className="flex justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-mark.png" alt="CHControl" className="h-16 w-auto" />
-          </div>
+          {/* Marca (mobile e reforço visual) */}
+          <Brand className="justify-center lg:hidden" />
 
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold tracking-tight">Acesso da Portaria</h2>
+          <div className="space-y-1.5 text-center lg:text-left">
+            <h2 className="text-3xl font-bold tracking-tight">Bem-vindo de volta</h2>
             <p className="text-sm text-muted-foreground">
-              Entre com suas credenciais para continuar.
+              Entre com suas credenciais para acessar a portaria.
             </p>
           </div>
 
@@ -68,8 +112,9 @@ export function LoginForm() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="portaria@condominio.com"
+                placeholder="voce@condominio.com"
                 autoComplete="email"
+                className="h-11"
                 required
               />
             </div>
@@ -81,6 +126,7 @@ export function LoginForm() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
+                className="h-11"
                 required
               />
             </div>
@@ -93,13 +139,6 @@ export function LoginForm() {
 
             <SubmitButton />
           </form>
-
-          <div className="rounded-lg border bg-muted/40 p-4 text-xs text-muted-foreground">
-            <p className="mb-1 font-medium text-foreground">Ambiente de demonstração</p>
-            <p>Controlador(a) de Acesso: portaria@chcontrol.dev</p>
-            <p>Superadmin: superadmin@chcontrol.dev</p>
-            <p>Senha: chcontrol123</p>
-          </div>
         </div>
       </div>
     </div>

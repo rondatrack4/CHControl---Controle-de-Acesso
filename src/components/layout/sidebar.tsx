@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ShieldCheck } from "lucide-react";
 import { NAV_ITEMS, RESIDENT_NAV_ITEMS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/database.types";
@@ -25,11 +26,14 @@ export function Sidebar({ collapsed, role, onNavigate, navSet = "default" }: Sid
         collapsed ? "w-[68px]" : "w-64"
       )}
     >
-      <div className="flex h-16 items-center gap-2 border-b px-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-mark.png" alt="CHControl" className="h-9 w-9 shrink-0 object-contain" />
+      <div className="flex h-16 items-center gap-2.5 border-b px-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 shadow-md shadow-blue-900/20">
+          <ShieldCheck className="h-5 w-5 text-white" />
+        </span>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight">CHControl</span>
+          <span className="text-lg font-bold tracking-tight">
+            <span className="text-blue-500">CH</span>Control
+          </span>
         )}
       </div>
 
