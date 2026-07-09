@@ -2,6 +2,7 @@ use std::net::TcpStream;
 use std::process::{Child, Command};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use tauri::menu::{MenuBuilder, SubmenuBuilder};
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 /// Porta local onde o sidecar Node (Next.js standalone) escuta.
@@ -25,6 +26,34 @@ fn wait_for_port(port: u16, timeout: Duration) -> bool {
 pub fn run() {
     tauri::Builder::default()
         .manage(Sidecar(Mutex::new(None)))
+        .menu(|handle| {
+            // Barra de menus nativa exibida na barra de título (Windows).
+            let arquivo = SubmenuBuilder::new(handle, "Arquivo")
+                .text("reload", "Recarregar")
+                .separator()
+                .text("quit", "Sair")
+                .build()?;
+            let ajuda = SubmenuBuilder::new(handle, "Ajuda")
+                .text("about", "Sobre o CHControl")
+                .build()?;
+            MenuBuilder::new(handle).item(&arquivo).item(&ajuda).build()
+        })
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "reload" => {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.eval("window.location.reload()");
+                }
+            }
+            "quit" => app.exit(0),
+            "about" => {
+                if let Some(w) = app.get_webview_window("main") {
+                    let _ = w.eval(
+                        "window.alert('CHControl — Sistema de Controle de Acesso\\nVersão 1.0');",
+                    );
+                }
+            }
+            _ => {}
+        })
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
